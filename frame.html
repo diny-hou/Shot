@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Frame</title>
+    <link rel="stylesheet" href="/src/frame.css" />
+  </head>
+  <body class="frame-body">
+    <div id="frame-root" class="frame-root">
+      <div id="frame-top" class="frame-top" title="ドラッグで移動">
+        <div class="frame-top-spacer" aria-hidden="true"></div>
+        <button
+          id="frame-capture-btn"
+          class="frame-capture"
+          type="button"
+          title="撮影"
+          aria-label="撮影"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 9.5h2.2l1.3-2h6.999l1.3 2H19a1 1 0 011 1V18a1 1 0 01-1 1H5a1 1 0 01-1-1v-7.5a1 1 0 011-1z" />
+            <circle cx="12" cy="13.75" r="3.1" />
+          </svg>
+        </button>
+        <button id="frame-close-btn" class="frame-close" type="button" title="閉じる" aria-label="閉じる">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+            <path d="M7 7l10 10M17 7L7 17" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="frame-box">
+        <div class="handle handle-n" data-dir="n"></div>
+        <div class="handle handle-s" data-dir="s"></div>
+        <div class="handle handle-e" data-dir="e"></div>
+        <div class="handle handle-w" data-dir="w"></div>
+        <div class="handle handle-ne" data-dir="ne"></div>
+        <div class="handle handle-nw" data-dir="nw"></div>
+        <div class="handle handle-se" data-dir="se"></div>
+        <div class="handle handle-sw" data-dir="sw"></div>
+      </div>
+    </div>
+    <script type="module" src="/src/frame.js"></script>
+  </body>
+</html>

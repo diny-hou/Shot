@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>プリセットを追加</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body class="popout-body">
+    <div class="popout-shell glass">
+      <header class="popout-titlebar" data-tauri-drag-region>
+        <p class="popout-title" data-tauri-drag-region>プリセットを追加</p>
+        <button id="popout-close" class="tool tool-sm win-btn win-btn-close" type="button" aria-label="閉じる"></button>
+      </header>
+      <div class="popout-content">
+        <div class="seg-toggle" id="preset-kind-toggle" role="group" aria-label="プリセット種類">
+          <button type="button" class="seg-toggle-btn is-active" data-kind="resolution">解像度</button>
+          <button type="button" class="seg-toggle-btn" data-kind="ratio">比率</button>
+        </div>
+        <label class="mini-field wide">
+          <span>名前</span>
+          <input id="preset-name-input" class="mini-input glass-input" type="text" placeholder="例: フルHD" />
+        </label>
+        <div class="preset-ratio-row">
+          <label class="mini-field">
+            <span id="preset-w-label">W (px)</span>
+            <input id="preset-w-input" class="mini-input mono glass-input" type="number" min="1" step="1" value="1920" />
+          </label>
+          <span class="preset-ratio-sep" id="preset-size-sep">×</span>
+          <label class="mini-field">
+            <span id="preset-h-label">H (px)</span>
+            <input id="preset-h-input" class="mini-input mono glass-input" type="number" min="1" step="1" value="1080" />
+          </label>
+        </div>
+        <div class="popup-actions">
+          <button id="preset-popup-cancel" class="popover-action popover-action-ghost" type="button">キャンセル</button>
+          <button id="preset-save-btn" class="popover-action" type="button">追加</button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/preset-add.js"></script>
+  </body>
+</html>

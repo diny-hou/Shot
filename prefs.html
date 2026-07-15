@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Preferences</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body class="popout-body">
+    <div class="popout-shell glass">
+      <header class="popout-titlebar" data-tauri-drag-region>
+        <p class="popout-title" data-tauri-drag-region>Preferences</p>
+        <button id="popout-close" class="tool tool-sm win-btn win-btn-close" type="button" aria-label="閉じる"></button>
+      </header>
+      <div class="popout-content">
+        <p class="prefs-subtitle">ウィンドウカラー</p>
+        <div class="prefs-tint-preview" id="prefs-tint-preview" aria-hidden="true"></div>
+        <label class="prefs-slider">
+          <span>Opacity <em id="prefs-opacity-val">43</em>%</span>
+          <input id="prefs-opacity" type="range" min="10" max="90" step="1" value="43" />
+        </label>
+        <label class="prefs-slider">
+          <span>Hue <em id="prefs-hue-val">220</em>°</span>
+          <input id="prefs-hue" type="range" min="0" max="360" step="1" value="220" />
+        </label>
+        <label class="prefs-slider">
+          <span>Saturation <em id="prefs-sat-val">28</em>%</span>
+          <input id="prefs-sat" type="range" min="0" max="100" step="1" value="28" />
+        </label>
+        <label class="prefs-slider">
+          <span>Brightness <em id="prefs-bri-val">8</em>%</span>
+          <input id="prefs-bri" type="range" min="0" max="60" step="1" value="8" />
+        </label>
+        <div class="popup-actions">
+          <button id="prefs-reset-btn" class="popover-action popover-action-ghost" type="button">リセット</button>
+          <button id="prefs-done-btn" class="popover-action" type="button">完了</button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/prefs.js"></script>
+  </body>
+</html>
