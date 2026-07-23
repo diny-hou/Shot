@@ -8,6 +8,7 @@ export const appState = {
   stock: [],
   currentItem: null,
   statusTimer: null,
+  monitors: [],
 };
 
 export async function api(command, args = {}) {
@@ -107,6 +108,67 @@ function presetLabel(value, settings = appState.settings) {
   const custom = (settings?.customPresets || []).find((p) => p.id === id);
   if (custom) return customDisplay(custom, settings).label;
   return id;
+}
+
+function monitorOptionLabel(monitor, index) {
+  return `ディスプレイ${index + 1}${monitor.isPrimary ? " (メイン)" : ""}`;
+}
+
+export function monitorMenuLabel(monitorId, monitors = appState.monitors) {
+  if (monitorId === "all") return "全モニター";
+  if (monitorId === "primary" || !monitorId) {
+    const primaryIndex = monitors.findIndex((monitor) => monitor.isPrimary);
+    const index = primaryIndex >= 0 ? primaryIndex : 0;
+    const monitor = monitors[index];
+    return monitor ? monitorOptionLabel(monitor, index) : "ディスプレイ1";
+  }
+  const index = Number(monitorId);
+  const monitor = monitors[index];
+  if (!monitor) return "ディスプレイ";
+  return monitorOptionLabel(monitor, index);
+}
+
+export async function refreshMonitors() {
+  try {
+    appState.monitors = await api("list_monitors");
+  } catch {
+    appState.monitors = [];
+  }
+  return appState.monitors;
+}
+
+export async function renderMonitorMenu() {
+  const panel = document.getElementById("monitor-panel");
+  const root = document.getElementById("monitor-menu");
+  if (!panel || !root) return;
+
+  const monitors = await refreshMonitors();
+  panel.replaceChildren();
+
+  const allOption = document.createElement("button");
+  allOption.type = "button";
+  allOption.className = "menu-select-option";
+  allOption.dataset.value = "all";
+  allOption.dataset.label = "全モニター";
+  allOption.textContent = "全モニター";
+  allOption.setAttribute("role", "option");
+  panel.appendChild(allOption);
+
+  monitors.forEach((monitor, index) => {
+    const label = monitorOptionLabel(monitor, index);
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "menu-select-option";
+    option.dataset.value = String(index);
+    option.dataset.label = label;
+    option.textContent = label;
+    option.setAttribute("role", "option");
+    panel.appendChild(option);
+  });
+
+  const monitorId = appState.settings?.captureMonitorId || "primary";
+  setMenuSelectValue(root, monitorId, monitorMenuLabel(monitorId, monitors));
+  document.getElementById("capture-monitor").value = monitorId;
 }
 
 const BUILTIN_PRESETS = [
@@ -494,6 +556,10 @@ export function readSettingsFromForm() {
     windowSaturation: appState.settings?.windowSaturation ?? DEFAULT_TINT.windowSaturation,
     windowBrightness: appState.settings?.windowBrightness ?? DEFAULT_TINT.windowBrightness,
     windowOpacity: appState.settings?.windowOpacity ?? DEFAULT_TINT.windowOpacity,
+    captureMonitorId:
+      document.getElementById("capture-monitor")?.value ||
+      appState.settings?.captureMonitorId ||
+      "primary",
   };
 }
 
@@ -516,6 +582,13 @@ export function applySettingsToForm(settings) {
     setMenuSelectValue(presetRoot, preset, presetLabel(preset, settings));
   }
   renderPresetMenu();
+
+  const monitorId = settings.captureMonitorId || "primary";
+  const monitorRoot = document.getElementById("monitor-menu");
+  document.getElementById("capture-monitor").value = monitorId;
+  if (monitorRoot) {
+    setMenuSelectValue(monitorRoot, monitorId, monitorMenuLabel(monitorId));
+  }
 
   document.getElementById("prefix-input").value = settings.prefix;
   document.getElementById("suffix-input").value = settings.suffix;

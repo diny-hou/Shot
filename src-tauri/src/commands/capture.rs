@@ -3,10 +3,10 @@ use crate::image_utils::{
     apply_preset_size, build_filename, crop_dynamic, file_to_data_url, image_to_data_url,
     rgba_to_dynamic, resolve_save_dir, save_image,
 };
-use crate::models::{AppSettings, CaptureResult, RegionRect, StockItem};
+use crate::models::{AppSettings, CaptureResult, MonitorInfo, RegionRect, StockItem};
 use crate::state::AppState;
 use crate::work_area::monitor_work_area;
-use image::GenericImageView;
+use image::{DynamicImage, GenericImageView, RgbaImage};
 use std::path::PathBuf;
 use tauri::{AppHandle, Emitter, Manager, State};
 use uuid::Uuid;
@@ -14,6 +14,28 @@ use xcap::Monitor;
 
 fn load_settings(app: &AppHandle, state: &State<AppState>) -> Result<AppSettings, String> {
     state.load_settings(app)
+}
+
+fn monitor_to_info(index: usize, monitor: &Monitor) -> MonitorInfo {
+    MonitorInfo {
+        id: index.to_string(),
+        name: monitor.name().to_string(),
+        x: monitor.x(),
+        y: monitor.y(),
+        width: monitor.width(),
+        height: monitor.height(),
+        is_primary: monitor.is_primary(),
+    }
+}
+
+#[tauri::command]
+pub fn list_monitors() -> Result<Vec<MonitorInfo>, String> {
+    let monitors = Monitor::all().map_err(|e| e.to_string())?;
+    Ok(monitors
+        .iter()
+        .enumerate()
+        .map(|(index, monitor)| monitor_to_info(index, monitor))
+        .collect())
 }
 
 fn find_monitor_for_region(x: i32, y: i32) -> Result<Monitor, String> {
@@ -30,25 +52,139 @@ fn find_monitor_for_region(x: i32, y: i32) -> Result<Monitor, String> {
         .ok_or_else(|| "No monitor found for the selected region".to_string())
 }
 
-fn capture_monitor_image(monitor: &Monitor) -> Result<image::RgbaImage, String> {
+fn capture_monitor_image(monitor: &Monitor) -> Result<RgbaImage, String> {
     monitor
         .capture_image()
         .map_err(|e| format!("Failed to capture monitor: {e}"))
 }
 
-fn capture_primary_monitor() -> Result<Monitor, String> {
+fn resolve_monitor_index(monitor_id: &str, monitors: &[Monitor]) -> Result<usize, String> {
+    if monitor_id == "primary" || monitor_id.is_empty() {
+        if let Some((index, _)) = monitors.iter().enumerate().find(|(_, monitor)| monitor.is_primary()) {
+            return Ok(index);
+        }
+        return Ok(0);
+    }
+
+    let index: usize = monitor_id
+        .parse()
+        .map_err(|_| format!("Invalid monitor id: {monitor_id}"))?;
+    if index >= monitors.len() {
+        return Err(format!("Monitor {monitor_id} not found"));
+    }
+    Ok(index)
+}
+
+fn capture_monitor_portion(
+    monitor: &Monitor,
+    exclude_taskbar: bool,
+) -> Result<(DynamicImage, i32, i32), String> {
+    let monitor_x = monitor.x();
+    let monitor_y = monitor.y();
+    let monitor_w = monitor.width();
+    let monitor_h = monitor.height();
+
+    let rgba = capture_monitor_image(monitor)?;
+    let mut image = rgba_to_dynamic(rgba);
+
+    if exclude_taskbar {
+        let (wx, wy, ww, wh) = monitor_work_area(monitor_x, monitor_y, monitor_w, monitor_h);
+        let local_x = (wx - monitor_x).max(0) as u32;
+        let local_y = (wy - monitor_y).max(0) as u32;
+        let max_w = monitor_w.saturating_sub(local_x);
+        let max_h = monitor_h.saturating_sub(local_y);
+        let crop_w = ww.min(max_w).max(1);
+        let crop_h = wh.min(max_h).max(1);
+
+        if crop_w < monitor_w || crop_h < monitor_h || local_x > 0 || local_y > 0 {
+            image = crop_dynamic(image, local_x, local_y, crop_w, crop_h);
+        }
+        Ok((image, wx, wy))
+    } else {
+        Ok((image, monitor_x, monitor_y))
+    }
+}
+
+fn blit_image(canvas: &mut RgbaImage, image: &DynamicImage, offset_x: i32, offset_y: i32) {
+    let rgba = image.to_rgba8();
+    for y in 0..rgba.height() {
+        for x in 0..rgba.width() {
+            let dest_x = offset_x + x as i32;
+            let dest_y = offset_y + y as i32;
+            if dest_x < 0 || dest_y < 0 {
+                continue;
+            }
+            let dest_x = dest_x as u32;
+            let dest_y = dest_y as u32;
+            if dest_x < canvas.width() && dest_y < canvas.height() {
+                canvas.put_pixel(dest_x, dest_y, *rgba.get_pixel(x, y));
+            }
+        }
+    }
+}
+
+fn capture_all_monitors_image(exclude_taskbar: bool) -> Result<DynamicImage, String> {
     let monitors = Monitor::all().map_err(|e| e.to_string())?;
-    monitors
-        .into_iter()
-        .next()
-        .ok_or_else(|| "No monitor found".to_string())
+    if monitors.is_empty() {
+        return Err("No monitor found".to_string());
+    }
+    if monitors.len() == 1 {
+        let (image, _, _) = capture_monitor_portion(&monitors[0], exclude_taskbar)?;
+        return Ok(image);
+    }
+
+    let portions: Vec<(DynamicImage, i32, i32)> = monitors
+        .iter()
+        .map(|monitor| capture_monitor_portion(monitor, exclude_taskbar))
+        .collect::<Result<_, _>>()?;
+
+    let (min_x, min_y, max_x, max_y) = portions.iter().fold(
+        (i32::MAX, i32::MAX, i32::MIN, i32::MIN),
+        |(min_x, min_y, max_x, max_y), (image, dest_x, dest_y)| {
+            let w = image.width() as i32;
+            let h = image.height() as i32;
+            (
+                min_x.min(*dest_x),
+                min_y.min(*dest_y),
+                max_x.max(dest_x + w),
+                max_y.max(dest_y + h),
+            )
+        },
+    );
+
+    let canvas_w = (max_x - min_x).max(1) as u32;
+    let canvas_h = (max_y - min_y).max(1) as u32;
+    let mut canvas = RgbaImage::new(canvas_w, canvas_h);
+
+    for (image, dest_x, dest_y) in portions {
+        blit_image(&mut canvas, &image, dest_x - min_x, dest_y - min_y);
+    }
+
+    Ok(DynamicImage::ImageRgba8(canvas))
+}
+
+fn capture_selected_monitor_image(
+    monitor_id: &str,
+    exclude_taskbar: bool,
+) -> Result<DynamicImage, String> {
+    if monitor_id == "all" {
+        return capture_all_monitors_image(exclude_taskbar);
+    }
+
+    let monitors = Monitor::all().map_err(|e| e.to_string())?;
+    let index = resolve_monitor_index(monitor_id, &monitors)?;
+    let monitor = monitors
+        .get(index)
+        .ok_or_else(|| format!("Monitor {index} not found"))?;
+    let (image, _, _) = capture_monitor_portion(monitor, exclude_taskbar)?;
+    Ok(image)
 }
 
 fn finalize_capture(
     app: &AppHandle,
     state: &State<AppState>,
     settings: &AppSettings,
-    image: image::DynamicImage,
+    image: DynamicImage,
 ) -> Result<CaptureResult, String> {
     let save_dir = resolve_save_dir(app, settings)?;
     let filename = build_filename(settings);
@@ -77,28 +213,7 @@ pub async fn capture_fullscreen(
     state: State<'_, AppState>,
 ) -> Result<CaptureResult, String> {
     let settings = load_settings(&app, &state)?;
-    let monitor = capture_primary_monitor()?;
-    let monitor_x = monitor.x();
-    let monitor_y = monitor.y();
-    let monitor_w = monitor.width();
-    let monitor_h = monitor.height();
-
-    let rgba = capture_monitor_image(&monitor)?;
-    let mut image = rgba_to_dynamic(rgba);
-
-    if settings.exclude_taskbar {
-        let (wx, wy, ww, wh) = monitor_work_area(monitor_x, monitor_y, monitor_w, monitor_h);
-        let local_x = (wx - monitor_x).max(0) as u32;
-        let local_y = (wy - monitor_y).max(0) as u32;
-        let max_w = monitor_w.saturating_sub(local_x);
-        let max_h = monitor_h.saturating_sub(local_y);
-        let crop_w = ww.min(max_w).max(1);
-        let crop_h = wh.min(max_h).max(1);
-
-        if crop_w < monitor_w || crop_h < monitor_h || local_x > 0 || local_y > 0 {
-            image = crop_dynamic(image, local_x, local_y, crop_w, crop_h);
-        }
-    }
+    let mut image = capture_selected_monitor_image(&settings.capture_monitor_id, settings.exclude_taskbar)?;
 
     // Apply preset aspect (and exact px resize when configured) to fullscreen captures.
     let (pw, ph, exact) = settings.preset_size();

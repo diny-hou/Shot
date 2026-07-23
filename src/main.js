@@ -11,6 +11,7 @@ import {
   persistSettings,
   refreshStock,
   renderPresetMenu,
+  renderMonitorMenu,
   renderStock,
   setStatus,
   api,
@@ -86,6 +87,7 @@ async function applySelectedPreset(label) {
 async function initSettings() {
   const settings = await api("get_settings");
   applySettingsToForm(settings);
+  await renderMonitorMenu();
 }
 
 function bindSettingsControls() {
@@ -103,7 +105,16 @@ function bindSettingsControls() {
     },
   });
 
+  bindMenuSelect(document.getElementById("monitor-menu"), {
+    onChange: async (value, label) => {
+      document.getElementById("capture-monitor").value = value;
+      await persistSettings();
+      setStatus(`Display → ${label}`);
+    },
+  });
+
   renderPresetMenu();
+  void renderMonitorMenu();
 
   document.getElementById("prefix-input").addEventListener("change", persistSettings);
   document.getElementById("suffix-input").addEventListener("change", persistSettings);
@@ -157,10 +168,11 @@ function bindSettingsControls() {
 }
 
 function bindSettingsSync() {
-  listen("settings-updated", (event) => {
+  listen("settings-updated", async (event) => {
     const settings = event.payload;
     if (!settings) return;
     applySettingsToForm(settings);
+    await renderMonitorMenu();
   });
 }
 
@@ -305,7 +317,7 @@ async function syncMainWindowMinHeight() {
   if (!stage) return;
 
   // Floor = bottom of stage (stock strip + its bottom margin/padding).
-  const minHeight = Math.max(200, Math.ceil(stage.getBoundingClientRect().bottom + 4));
+  const minHeight = Math.max(280, Math.ceil(stage.getBoundingClientRect().bottom + 4));
   const win = getCurrentWindow();
   const [scale, size] = await Promise.all([win.scaleFactor(), win.innerSize()]);
   const logicalWidth = size.width / scale;

@@ -1,4 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
+import { getVersion } from "@tauri-apps/api/app";
+import { check } from "@tauri-apps/plugin-updater";
+import { relaunch } from "@tauri-apps/plugin-process";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { icon } from "./icons.js";
 import { bindRightDragMove } from "./right-drag-move.js";
@@ -92,6 +95,38 @@ async function closeSelf() {
   await getCurrentWindow().close();
 }
 
+async function runUpdate() {
+  const updateBtn = document.getElementById("prefs-update-btn");
+  const statusEl = document.getElementById("prefs-update-status");
+  if (!updateBtn || !statusEl) return;
+
+  updateBtn.disabled = true;
+  try {
+    statusEl.textContent = "確認中…";
+    const update = await check();
+    if (!update) {
+      statusEl.textContent = "最新です";
+      return;
+    }
+
+    statusEl.textContent = `v${update.version} をダウンロード中…`;
+    await update.downloadAndInstall((event) => {
+      if (event.event === "Progress") {
+        const percent = event.data.percent != null ? Math.round(event.data.percent) : null;
+        statusEl.textContent =
+          percent != null ? `ダウンロード中… ${percent}%` : "ダウンロード中…";
+      }
+    });
+
+    statusEl.textContent = "再起動中…";
+    await relaunch();
+  } catch (error) {
+    statusEl.textContent = String(error);
+  } finally {
+    updateBtn.disabled = false;
+  }
+}
+
 window.addEventListener("DOMContentLoaded", async () => {
   const win = getCurrentWindow();
   bindRightDragMove(win);
@@ -109,6 +144,18 @@ window.addEventListener("DOMContentLoaded", async () => {
   } catch {
     syncPrefsForm(DEFAULT_TINT);
   }
+
+  try {
+    const version = await getVersion();
+    const versionEl = document.getElementById("prefs-version");
+    if (versionEl) versionEl.textContent = version;
+  } catch (error) {
+    console.error(error);
+  }
+
+  document.getElementById("prefs-update-btn")?.addEventListener("click", () => {
+    void runUpdate();
+  });
 
   let tintSaveTimer = null;
   const queuePersist = () => {

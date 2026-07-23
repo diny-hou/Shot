@@ -16,9 +16,9 @@
         "label": "main",
         "title": "Shot",
         "width": 520,
-        "height": 232,
+        "height": 280,
         "minWidth": 360,
-        "minHeight": 232,
+        "minHeight": 280,
         "resizable": true,
         "transparent": true,
         "decorations": false,
@@ -30,9 +30,18 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE0OEU0NTZDNUI1QTBDMDgKUldRSURGcGJiRVdPRkRzV0NxMCtCenlwWTFpbmx0UGtXc1ZYVU9wZDJUNkxvaVowaXNXWTVYWmwK",
+      "endpoints": [
+        "https://github.com/diny-hou/Shot/releases/latest/download/latest.json"
+      ]
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

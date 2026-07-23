@@ -26,6 +26,8 @@ pub fn run() {
         .plugin(tauri_plugin_store::Builder::default().build())
         .plugin(tauri_plugin_drag::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(AppState::default())
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
@@ -74,6 +76,7 @@ pub fn run() {
             commands::capture::capture_fullscreen,
             commands::capture::capture_region,
             commands::capture::capture_frame,
+            commands::capture::list_monitors,
             commands::capture::get_image_data_url,
             commands::crop::crop_image,
             commands::stock::list_stock,

@@ -24,6 +24,10 @@ fn default_window_opacity() -> f64 {
     43.0
 }
 
+fn default_capture_monitor_id() -> String {
+    "primary".into()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CustomPreset {
@@ -72,6 +76,9 @@ pub struct AppSettings {
     pub window_brightness: f64,
     #[serde(default = "default_window_opacity")]
     pub window_opacity: f64,
+    /// `"primary"` | monitor index (`"0"`, `"1"`, …) | `"all"`
+    #[serde(default = "default_capture_monitor_id")]
+    pub capture_monitor_id: String,
 }
 
 impl Default for AppSettings {
@@ -90,6 +97,7 @@ impl Default for AppSettings {
             window_saturation: default_window_saturation(),
             window_brightness: default_window_brightness(),
             window_opacity: default_window_opacity(),
+            capture_monitor_id: default_capture_monitor_id(),
         }
     }
 }
@@ -205,6 +213,18 @@ pub struct StockItem {
     pub captured_at: String,
     pub width: u32,
     pub height: u32,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MonitorInfo {
+    pub id: String,
+    pub name: String,
+    pub x: i32,
+    pub y: i32,
+    pub width: u32,
+    pub height: u32,
+    pub is_primary: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
