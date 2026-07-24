@@ -298,5 +298,4 @@ pub struct CropRect {
 #[serde(rename_all = "camelCase")]
 pub struct CaptureResult {
     pub item: StockItem,
-    pub data_url: String,
 }

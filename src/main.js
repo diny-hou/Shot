@@ -6,6 +6,8 @@ import {
   applySettingsToForm,
   bindStockGrabScroll,
   handleCaptureResult,
+  beginCapture,
+  endCapture,
   openPrefsPopup,
   openSaveFolder,
   pickSaveDirectory,
@@ -249,26 +251,27 @@ function bindCaptureButtons() {
   const regionBtn = document.getElementById("capture-region-btn");
   const frameBtn = document.getElementById("frame-mode-btn");
 
-  fullBtn.addEventListener("click", async () => {
-    fullBtn.disabled = true;
-    regionBtn.disabled = true;
+  const runFullscreenCapture = async () => {
+    beginCapture();
 
     try {
-      setStatus("Capturing…");
       const frameOpen = frameBtn.getAttribute("aria-pressed") === "true";
       if (frameOpen) {
         // Result is applied via capture-completed (also used by the frame shutter).
         await api("capture_frame");
       } else {
         const result = await api("capture_fullscreen");
-        await handleCaptureResult(result);
+        handleCaptureResult(result);
       }
     } catch (error) {
       setStatus(String(error), true);
     } finally {
-      fullBtn.disabled = false;
-      regionBtn.disabled = false;
+      endCapture();
     }
+  };
+
+  fullBtn.addEventListener("click", () => {
+    void runFullscreenCapture();
   });
 
   regionBtn.addEventListener("click", async () => {
@@ -296,7 +299,7 @@ function bindRegionListener() {
       await api("close_region_overlay");
       setStatus("Capturing…");
       const result = await api("capture_region", { region: event.payload });
-      await handleCaptureResult(result);
+      handleCaptureResult(result);
     } catch (error) {
       setStatus(String(error), true);
     } finally {
@@ -305,10 +308,10 @@ function bindRegionListener() {
     }
   });
 
-  listen("capture-completed", async (event) => {
+  listen("capture-completed", (event) => {
     try {
       if (!event.payload?.item) return;
-      await handleCaptureResult(event.payload);
+      handleCaptureResult(event.payload);
     } catch (error) {
       setStatus(String(error), true);
     }

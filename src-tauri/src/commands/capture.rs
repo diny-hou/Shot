@@ -1,16 +1,19 @@
 use crate::frame_layout::{BORDER, CHROME_TOP};
 use crate::image_utils::{
-    apply_preset_size, build_filename, crop_dynamic, file_to_data_url, image_to_data_url,
-    rgba_to_dynamic, resolve_save_dir, save_image,
+    apply_preset_size, build_filename, crop_dynamic, file_to_data_url, rgba_to_dynamic,
+    resolve_save_dir, save_image,
 };
 use crate::models::{AppSettings, CaptureResult, MonitorInfo, RegionRect, StockItem};
 use crate::state::AppState;
 use crate::work_area::monitor_work_area;
 use image::{DynamicImage, GenericImageView, RgbaImage};
 use std::path::PathBuf;
-use tauri::{AppHandle, Emitter, Manager, State};
+use std::sync::LazyLock;
+use tauri::{async_runtime::Mutex, AppHandle, Emitter, Manager, State};
 use uuid::Uuid;
 use xcap::Monitor;
+
+static FRAME_CAPTURE: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
 fn load_settings(app: &AppHandle, state: &State<AppState>) -> Result<AppSettings, String> {
     state.load_settings(app)
@@ -216,10 +219,9 @@ fn finalize_capture(
         height,
     };
 
-    let data_url = image_to_data_url(&image, &settings.extension)?;
     state.push_stock(item.clone());
 
-    Ok(CaptureResult { item, data_url })
+    Ok(CaptureResult { item })
 }
 
 #[tauri::command]
@@ -228,16 +230,22 @@ pub async fn capture_fullscreen(
     state: State<'_, AppState>,
 ) -> Result<CaptureResult, String> {
     let settings = load_settings(&app, &state)?;
-    let monitor_id = settings.capture_monitor_id.as_str();
-    let mut image =
-        capture_selected_monitor_image(monitor_id, settings.exclude_taskbar)?;
+    let monitor_id = settings.capture_monitor_id.clone();
+    let exclude_taskbar = settings.exclude_taskbar;
+    let apply_preset = monitor_id != "all";
+    let (preset_w, preset_h, preset_exact) = settings.preset_size();
 
-    // Multi-monitor stitch must keep the full virtual desktop; preset crop would
-    // center-crop away the other displays (e.g. 32:9 → 16:9).
-    if monitor_id != "all" {
-        let (pw, ph, exact) = settings.preset_size();
-        image = apply_preset_size(image, pw, ph, exact);
-    }
+    let image = tauri::async_runtime::spawn_blocking(move || {
+        let mut image = capture_selected_monitor_image(&monitor_id, exclude_taskbar)?;
+        // Multi-monitor stitch must keep the full virtual desktop; preset crop would
+        // center-crop away the other displays (e.g. 32:9 → 16:9).
+        if apply_preset {
+            image = apply_preset_size(image, preset_w, preset_h, preset_exact);
+        }
+        Ok::<DynamicImage, String>(image)
+    })
+    .await
+    .map_err(|e| e.to_string())??;
 
     finalize_capture(&app, &state, &settings, image)
 }
@@ -253,22 +261,31 @@ pub async fn capture_region(
     }
 
     let settings = load_settings(&app, &state)?;
-    let monitor = find_monitor_for_region(region.x, region.y)?;
-    let monitor_x = monitor.x();
-    let monitor_y = monitor.y();
-    let monitor_w = monitor.width();
-    let monitor_h = monitor.height();
+    let region_x = region.x;
+    let region_y = region.y;
+    let region_w = region.width;
+    let region_h = region.height;
 
-    let local_x = (region.x - monitor_x).max(0) as u32;
-    let local_y = (region.y - monitor_y).max(0) as u32;
-    let max_w = monitor_w.saturating_sub(local_x);
-    let max_h = monitor_h.saturating_sub(local_y);
-    let crop_w = region.width.min(max_w).max(1);
-    let crop_h = region.height.min(max_h).max(1);
+    let cropped = tauri::async_runtime::spawn_blocking(move || {
+        let monitor = find_monitor_for_region(region_x, region_y)?;
+        let monitor_x = monitor.x();
+        let monitor_y = monitor.y();
+        let monitor_w = monitor.width();
+        let monitor_h = monitor.height();
 
-    let rgba = capture_monitor_image(&monitor)?;
-    let image = rgba_to_dynamic(rgba);
-    let cropped = crop_dynamic(image, local_x, local_y, crop_w, crop_h);
+        let local_x = (region_x - monitor_x).max(0) as u32;
+        let local_y = (region_y - monitor_y).max(0) as u32;
+        let max_w = monitor_w.saturating_sub(local_x);
+        let max_h = monitor_h.saturating_sub(local_y);
+        let crop_w = region_w.min(max_w).max(1);
+        let crop_h = region_h.min(max_h).max(1);
+
+        let rgba = capture_monitor_image(&monitor)?;
+        let image = rgba_to_dynamic(rgba);
+        Ok::<DynamicImage, String>(crop_dynamic(image, local_x, local_y, crop_w, crop_h))
+    })
+    .await
+    .map_err(|e| e.to_string())??;
 
     finalize_capture(&app, &state, &settings, cropped)
 }
@@ -278,6 +295,8 @@ pub async fn capture_frame(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<CaptureResult, String> {
+    let _frame_guard = FRAME_CAPTURE.lock().await;
+
     let window = app
         .get_webview_window("frame")
         .ok_or_else(|| "Frame mode is not open".to_string())?;

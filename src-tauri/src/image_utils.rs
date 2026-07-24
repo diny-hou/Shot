@@ -26,7 +26,12 @@ pub fn resolve_save_dir(app: &AppHandle, settings: &AppSettings) -> Result<PathB
 }
 
 pub fn build_filename(settings: &AppSettings) -> String {
-    let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S").to_string();
+    let now = chrono::Local::now();
+    let timestamp = format!(
+        "{}_{:03}",
+        now.format("%Y%m%d_%H%M%S"),
+        now.timestamp_subsec_millis()
+    );
     format!(
         "{}{}{}.{}",
         settings.prefix, timestamp, settings.suffix, settings.extension

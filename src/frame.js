@@ -36,7 +36,6 @@ let startPos = { x: 0, y: 0 };
 let scale = 1;
 let rafId = 0;
 let pendingPos = null;
-let capturing = false;
 let presets = [];
 let activePresetId = null;
 
@@ -121,17 +120,11 @@ function beginResize(event, dir) {
 }
 
 async function captureFromFrame() {
-  if (capturing) return;
-  capturing = true;
-  captureBtn.disabled = true;
   closePresetPanel();
   try {
     await invoke("capture_frame");
   } catch (error) {
     console.error(error);
-  } finally {
-    capturing = false;
-    captureBtn.disabled = false;
   }
 }
 

@@ -1,6 +1,4 @@
-use crate::image_utils::{
-    build_filename, crop_dynamic, image_to_data_url, resolve_save_dir, save_image,
-};
+use crate::image_utils::{build_filename, crop_dynamic, resolve_save_dir, save_image};
 use crate::models::{CaptureResult, CropRect, StockItem};
 use crate::state::AppState;
 use image::{GenericImageView, ImageReader};
@@ -50,8 +48,7 @@ pub async fn crop_image(
         height,
     };
 
-    let data_url = image_to_data_url(&cropped, &settings.extension)?;
     state.push_stock(item.clone());
 
-    Ok(CaptureResult { item, data_url })
+    Ok(CaptureResult { item })
 }

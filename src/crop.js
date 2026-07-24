@@ -1,4 +1,4 @@
-import { api, appState, handleCaptureResult, setStatus } from "./app.js";
+import { api, appState, handleCaptureResult, beginCapture, endCapture, setStatus } from "./app.js";
 
 let cropRect = null;
 let dragging = false;
@@ -142,15 +142,17 @@ export function initCrop() {
 
     try {
       applyBtn.disabled = true;
+      beginCapture();
       const result = await api("crop_image", {
         path: appState.currentItem.path,
         crop: natural,
       });
       exitCropMode();
-      await handleCaptureResult(result);
+      handleCaptureResult(result);
     } catch (error) {
       setStatus(String(error), true);
     } finally {
+      endCapture();
       applyBtn.disabled = false;
     }
   });

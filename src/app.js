@@ -9,6 +9,7 @@ export const appState = {
   currentItem: null,
   statusTimer: null,
   monitors: [],
+  capturesInFlight: 0,
 };
 
 export async function api(command, args = {}) {
@@ -877,78 +878,105 @@ export function renderStock() {
   list.replaceChildren();
 
   if (!appState.stock.length) {
-    const empty = document.createElement("div");
-    empty.className = "stock-empty";
-    empty.dataset.tooltip = "まだキャプチャがありません";
-    empty.textContent = "Capture to add stock";
-    list.appendChild(empty);
+    list.appendChild(createStockEmpty());
     return;
   }
 
   for (const item of appState.stock) {
-    const card = document.createElement("div");
-    card.className = "stock-card";
-    card.classList.toggle("active", appState.currentItem?.id === item.id);
-
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "stock-item";
-    button.dataset.id = item.id;
-    button.draggable = true;
-    button.dataset.tooltip = `${item.filename} · クリック: フォルダ · Ctrl+クリック: コピー · ドラッグ: 書き出し（倍率適用）`;
-
-    const frame = document.createElement("div");
-    frame.className = "stock-frame";
-
-    const thumb = document.createElement("img");
-    thumb.alt = "";
-    thumb.loading = "lazy";
-    thumb.draggable = false;
-    api("get_image_data_url", { path: item.path }).then((url) => {
-      thumb.src = url;
-    });
-
-    frame.append(thumb);
-    button.append(frame);
-    button.addEventListener("click", async (event) => {
-      if (event.ctrlKey || event.metaKey) {
-        event.preventDefault();
-        event.stopPropagation();
-        await copyStockToClipboard(item);
-        return;
-      }
-      await selectStockItem(item.id, { reveal: true });
-    });
-    button.addEventListener("dragstart", async (event) => {
-      event.preventDefault();
-      appState.currentItem = item;
-      renderStock();
-      try {
-        const exportPath = await getExportPathForItem(item);
-        await startDrag({
-          item: [exportPath],
-          icon: exportPath,
-        });
-        setStatus("Dragging");
-      } catch (error) {
-        setStatus(String(error), true);
-      }
-    });
-
-    const deleteBtn = document.createElement("button");
-    deleteBtn.type = "button";
-    deleteBtn.className = "stock-delete";
-    deleteBtn.dataset.tooltip = "ストックから削除";
-    deleteBtn.textContent = "×";
-    deleteBtn.addEventListener("click", async (event) => {
-      event.stopPropagation();
-      await deleteStockItem(item.id);
-      setStatus("Removed");
-    });
-
-    card.append(button, deleteBtn);
-    list.appendChild(card);
+    list.appendChild(createStockCard(item));
   }
+}
+
+function createStockEmpty() {
+  const empty = document.createElement("div");
+  empty.className = "stock-empty";
+  empty.dataset.tooltip = "まだキャプチャがありません";
+  empty.textContent = "Capture to add stock";
+  return empty;
+}
+
+function createStockCard(item) {
+  const card = document.createElement("div");
+  card.className = "stock-card";
+  card.classList.toggle("active", appState.currentItem?.id === item.id);
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "stock-item";
+  button.dataset.id = item.id;
+  button.draggable = true;
+  button.dataset.tooltip = `${item.filename} · クリック: フォルダ · Ctrl+クリック: コピー · ドラッグ: 書き出し（倍率適用）`;
+
+  const frame = document.createElement("div");
+  frame.className = "stock-frame";
+
+  const thumb = document.createElement("img");
+  thumb.alt = "";
+  thumb.loading = "lazy";
+  thumb.draggable = false;
+  api("get_image_data_url", { path: item.path }).then((url) => {
+    thumb.src = url;
+  });
+
+  frame.append(thumb);
+  button.append(frame);
+  button.addEventListener("click", async (event) => {
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      await copyStockToClipboard(item);
+      return;
+    }
+    await selectStockItem(item.id, { reveal: true });
+  });
+  button.addEventListener("dragstart", async (event) => {
+    event.preventDefault();
+    appState.currentItem = item;
+    renderStock();
+    try {
+      const exportPath = await getExportPathForItem(item);
+      await startDrag({
+        item: [exportPath],
+        icon: exportPath,
+      });
+      setStatus("Dragging");
+    } catch (error) {
+      setStatus(String(error), true);
+    }
+  });
+
+  const deleteBtn = document.createElement("button");
+  deleteBtn.type = "button";
+  deleteBtn.className = "stock-delete";
+  deleteBtn.dataset.tooltip = "ストックから削除";
+  deleteBtn.textContent = "×";
+  deleteBtn.addEventListener("click", async (event) => {
+    event.stopPropagation();
+    await deleteStockItem(item.id);
+    setStatus("Removed");
+  });
+
+  card.append(button, deleteBtn);
+  return card;
+}
+
+export function prependStockItem(item) {
+  appState.stock.unshift(item);
+  if (appState.stock.length > 50) {
+    appState.stock.length = 50;
+  }
+
+  const list = document.getElementById("stock-list");
+  if (!list) return;
+
+  list.querySelector(".stock-empty")?.remove();
+  list.querySelectorAll(".stock-card.active").forEach((card) => {
+    card.classList.remove("active");
+  });
+
+  const card = createStockCard(item);
+  card.classList.add("active");
+  list.prepend(card);
 }
 
 export async function selectStockItem(id, { reveal = true } = {}) {
@@ -980,11 +1008,30 @@ export async function copyStockToClipboard(item) {
   }
 }
 
-export async function handleCaptureResult(result) {
-  await refreshStock();
+export function beginCapture() {
+  appState.capturesInFlight += 1;
+  setStatus(
+    appState.capturesInFlight > 1
+      ? `Capturing… (${appState.capturesInFlight})`
+      : "Capturing…",
+  );
+}
+
+export function endCapture() {
+  appState.capturesInFlight = Math.max(0, appState.capturesInFlight - 1);
+  if (appState.capturesInFlight === 0) {
+    setStatus("Captured");
+  } else {
+    setStatus(`Capturing… (${appState.capturesInFlight})`);
+  }
+}
+
+export function handleCaptureResult(result) {
+  prependStockItem(result.item);
   appState.currentItem = result.item;
-  renderStock();
-  setStatus("Captured");
+  if (appState.capturesInFlight === 0) {
+    setStatus("Captured");
+  }
 }
 
 /** Middle-mouse grab-scroll for the stock filmstrip. */
