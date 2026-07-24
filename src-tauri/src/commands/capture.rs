@@ -106,21 +106,31 @@ fn capture_monitor_portion(
 }
 
 fn blit_image(canvas: &mut RgbaImage, image: &DynamicImage, offset_x: i32, offset_y: i32) {
-    let rgba = image.to_rgba8();
-    for y in 0..rgba.height() {
-        for x in 0..rgba.width() {
-            let dest_x = offset_x + x as i32;
-            let dest_y = offset_y + y as i32;
-            if dest_x < 0 || dest_y < 0 {
-                continue;
-            }
-            let dest_x = dest_x as u32;
-            let dest_y = dest_y as u32;
-            if dest_x < canvas.width() && dest_y < canvas.height() {
-                canvas.put_pixel(dest_x, dest_y, *rgba.get_pixel(x, y));
-            }
-        }
+    if offset_x >= canvas.width() as i32 || offset_y >= canvas.height() as i32 {
+        return;
     }
+
+    let rgba = image.to_rgba8();
+    let src_x = (-offset_x).max(0) as u32;
+    let src_y = (-offset_y).max(0) as u32;
+    if src_x >= rgba.width() || src_y >= rgba.height() {
+        return;
+    }
+
+    let dest_x = offset_x.max(0) as u32;
+    let dest_y = offset_y.max(0) as u32;
+    let copy_w = (rgba.width() - src_x).min(canvas.width().saturating_sub(dest_x));
+    let copy_h = (rgba.height() - src_y).min(canvas.height().saturating_sub(dest_y));
+    if copy_w == 0 || copy_h == 0 {
+        return;
+    }
+
+    let cropped = if src_x == 0 && src_y == 0 && copy_w == rgba.width() && copy_h == rgba.height() {
+        rgba
+    } else {
+        image::imageops::crop_imm(&rgba, src_x, src_y, copy_w, copy_h).to_image()
+    };
+    image::imageops::overlay(canvas, &cropped, dest_x as i64, dest_y as i64);
 }
 
 fn capture_all_monitors_image(exclude_taskbar: bool) -> Result<DynamicImage, String> {
@@ -133,10 +143,15 @@ fn capture_all_monitors_image(exclude_taskbar: bool) -> Result<DynamicImage, Str
         return Ok(image);
     }
 
+    // Capture each display, then place by virtual-desktop coordinates.
+    // Use the captured bitmap size (not just metadata) so DPI mismatches still stitch.
     let portions: Vec<(DynamicImage, i32, i32)> = monitors
         .iter()
-        .map(|monitor| capture_monitor_portion(monitor, exclude_taskbar))
-        .collect::<Result<_, _>>()?;
+        .map(|monitor| {
+            let (image, dest_x, dest_y) = capture_monitor_portion(monitor, exclude_taskbar)?;
+            Ok((image, dest_x, dest_y))
+        })
+        .collect::<Result<_, String>>()?;
 
     let (min_x, min_y, max_x, max_y) = portions.iter().fold(
         (i32::MAX, i32::MAX, i32::MIN, i32::MIN),
@@ -154,7 +169,7 @@ fn capture_all_monitors_image(exclude_taskbar: bool) -> Result<DynamicImage, Str
 
     let canvas_w = (max_x - min_x).max(1) as u32;
     let canvas_h = (max_y - min_y).max(1) as u32;
-    let mut canvas = RgbaImage::new(canvas_w, canvas_h);
+    let mut canvas = RgbaImage::from_pixel(canvas_w, canvas_h, image::Rgba([0, 0, 0, 255]));
 
     for (image, dest_x, dest_y) in portions {
         blit_image(&mut canvas, &image, dest_x - min_x, dest_y - min_y);
@@ -213,11 +228,16 @@ pub async fn capture_fullscreen(
     state: State<'_, AppState>,
 ) -> Result<CaptureResult, String> {
     let settings = load_settings(&app, &state)?;
-    let mut image = capture_selected_monitor_image(&settings.capture_monitor_id, settings.exclude_taskbar)?;
+    let monitor_id = settings.capture_monitor_id.as_str();
+    let mut image =
+        capture_selected_monitor_image(monitor_id, settings.exclude_taskbar)?;
 
-    // Apply preset aspect (and exact px resize when configured) to fullscreen captures.
-    let (pw, ph, exact) = settings.preset_size();
-    image = apply_preset_size(image, pw, ph, exact);
+    // Multi-monitor stitch must keep the full virtual desktop; preset crop would
+    // center-crop away the other displays (e.g. 32:9 → 16:9).
+    if monitor_id != "all" {
+        let (pw, ph, exact) = settings.preset_size();
+        image = apply_preset_size(image, pw, ph, exact);
+    }
 
     finalize_capture(&app, &state, &settings, image)
 }

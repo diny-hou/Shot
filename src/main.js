@@ -317,7 +317,7 @@ async function syncMainWindowMinHeight() {
   if (!stage) return;
 
   // Floor = bottom of stage (stock strip + its bottom margin/padding).
-  const minHeight = Math.max(280, Math.ceil(stage.getBoundingClientRect().bottom + 4));
+  const minHeight = Math.max(250, Math.ceil(stage.getBoundingClientRect().bottom + 4));
   const win = getCurrentWindow();
   const [scale, size] = await Promise.all([win.scaleFactor(), win.innerSize()]);
   const logicalWidth = size.width / scale;

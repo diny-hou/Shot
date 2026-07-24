@@ -51,86 +51,88 @@
       </header>
 
       <main class="stage">
-        <div class="options-row">
-          <div
-            class="menu-select glass-inset"
-            id="extension-menu"
-            data-tooltip="保存形式"
-          >
-            <button
-              type="button"
-              class="menu-select-btn"
-              aria-haspopup="listbox"
-              aria-expanded="false"
-              aria-label="保存形式"
-            >
-              <span class="menu-select-label">PNG</span>
-              <span class="menu-select-caret" aria-hidden="true"></span>
-            </button>
-            <div class="menu-select-panel glass" hidden role="listbox">
-              <button type="button" class="menu-select-option" data-value="png" data-label="PNG" role="option">PNG</button>
-              <button type="button" class="menu-select-option" data-value="jpeg" data-label="JPEG" role="option">JPEG</button>
-              <button type="button" class="menu-select-option" data-value="webp" data-label="WebP" role="option">WebP</button>
-            </div>
-            <input type="hidden" id="extension-select" value="png" />
-          </div>
-
-          <div
-            class="menu-select glass-inset"
-            id="preset-menu"
-            data-tooltip="プリセット（枠／全画面キャプチャ）"
-          >
-            <button
-              type="button"
-              class="menu-select-btn"
-              aria-haspopup="listbox"
-              aria-expanded="false"
-              aria-label="枠のプリセット"
-            >
-              <span class="menu-select-label">1920×1080</span>
-              <span class="menu-select-caret" aria-hidden="true"></span>
-            </button>
-            <div class="menu-select-panel glass" id="preset-panel" hidden role="listbox"></div>
-            <input type="hidden" id="resolution-preset" value="ratio16x9" />
-          </div>
-
-          <div
-            class="menu-select glass-inset"
-            id="monitor-menu"
-            data-tooltip="キャプチャ対象ディスプレイ"
-          >
-            <button
-              type="button"
-              class="menu-select-btn"
-              aria-haspopup="listbox"
-              aria-expanded="false"
-              aria-label="キャプチャ対象ディスプレイ"
-            >
-              <span class="menu-select-label">ディスプレイ1</span>
-              <span class="menu-select-caret" aria-hidden="true"></span>
-            </button>
-            <div class="menu-select-panel glass" id="monitor-panel" hidden role="listbox"></div>
-            <input type="hidden" id="capture-monitor" value="primary" />
-          </div>
-        </div>
-
         <div class="capture-row">
-          <button id="capture-region-btn" class="tool tool-side" type="button" data-tooltip="範囲選択" aria-label="範囲選択"></button>
-          <button
-            id="capture-full-btn"
-            class="tool tool-capture"
-            type="button"
-            data-tooltip="スクリーンショット"
-            aria-label="スクリーンショット"
-          ></button>
-          <button
-            id="frame-mode-btn"
-            class="tool tool-side"
-            type="button"
-            data-tooltip="ウィンドウキャプチャ（枠）"
-            aria-label="ウィンドウキャプチャ"
-            aria-pressed="false"
-          ></button>
+          <div class="capture-options">
+            <div
+              class="menu-select glass-inset"
+              id="extension-menu"
+              data-tooltip="保存形式"
+            >
+              <button
+                type="button"
+                class="menu-select-btn"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+                aria-label="保存形式"
+              >
+                <span class="menu-select-label">PNG</span>
+                <span class="menu-select-caret" aria-hidden="true"></span>
+              </button>
+              <div class="menu-select-panel glass" hidden role="listbox">
+                <button type="button" class="menu-select-option" data-value="png" data-label="PNG" role="option">PNG</button>
+                <button type="button" class="menu-select-option" data-value="jpeg" data-label="JPEG" role="option">JPEG</button>
+                <button type="button" class="menu-select-option" data-value="webp" data-label="WebP" role="option">WebP</button>
+              </div>
+              <input type="hidden" id="extension-select" value="png" />
+            </div>
+
+            <div
+              class="menu-select glass-inset"
+              id="preset-menu"
+              data-tooltip="プリセット（枠／全画面キャプチャ）"
+            >
+              <button
+                type="button"
+                class="menu-select-btn"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+                aria-label="枠のプリセット"
+              >
+                <span class="menu-select-label">1920×1080</span>
+                <span class="menu-select-caret" aria-hidden="true"></span>
+              </button>
+              <div class="menu-select-panel glass" id="preset-panel" hidden role="listbox"></div>
+              <input type="hidden" id="resolution-preset" value="ratio16x9" />
+            </div>
+
+            <div
+              class="menu-select glass-inset"
+              id="monitor-menu"
+              data-tooltip="キャプチャ対象ディスプレイ"
+            >
+              <button
+                type="button"
+                class="menu-select-btn"
+                aria-haspopup="listbox"
+                aria-expanded="false"
+                aria-label="キャプチャ対象ディスプレイ"
+              >
+                <span class="menu-select-label">ディスプレイ1</span>
+                <span class="menu-select-caret" aria-hidden="true"></span>
+              </button>
+              <div class="menu-select-panel glass" id="monitor-panel" hidden role="listbox"></div>
+              <input type="hidden" id="capture-monitor" value="primary" />
+            </div>
+          </div>
+
+          <div class="capture-actions">
+            <button id="capture-region-btn" class="tool tool-side" type="button" data-tooltip="範囲選択" aria-label="範囲選択"></button>
+            <button
+              id="capture-full-btn"
+              class="tool tool-capture"
+              type="button"
+              data-tooltip="スクリーンショット"
+              aria-label="スクリーンショット"
+            ></button>
+            <button
+              id="frame-mode-btn"
+              class="tool tool-side"
+              type="button"
+              data-tooltip="ウィンドウキャプチャ（枠）"
+              aria-label="ウィンドウキャプチャ"
+              aria-pressed="false"
+            ></button>
+          </div>
         </div>
 
         <section class="stock-strip glass" aria-label="Stock" data-tooltip="ミドルドラッグで横スクロール">
