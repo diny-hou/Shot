@@ -83,6 +83,7 @@ pub fn run() {
             commands::stock::delete_stock_item,
             commands::stock::clear_stock,
             commands::stock::copy_image_to_clipboard,
+            commands::stock::prepare_export_image,
             commands::window::hide_main_window,
             commands::window::show_main_window,
             commands::window::open_region_overlay,

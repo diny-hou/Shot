@@ -208,6 +208,14 @@ select {
   white-space: nowrap;
 }
 
+.titlebar-controls .menu-select-label {
+  max-width: 6.5em;
+}
+
+.capture-options .menu-select-label {
+  max-width: 7.5em;
+}
+
 .menu-select-caret {
   width: 5px;
   height: 5px;

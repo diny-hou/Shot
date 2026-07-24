@@ -12,7 +12,9 @@ import {
   refreshStock,
   renderPresetMenu,
   renderMonitorMenu,
+  renderExportScaleMenu,
   renderStock,
+  addCustomExportScale,
   setStatus,
   api,
 } from "./app.js";
@@ -113,8 +115,17 @@ function bindSettingsControls() {
     },
   });
 
+  bindMenuSelect(document.getElementById("export-scale-menu"), {
+    onChange: async (value, label) => {
+      document.getElementById("export-scale-preset").value = value;
+      await persistSettings();
+      setStatus(`Export → ${label}`);
+    },
+  });
+
   renderPresetMenu();
   void renderMonitorMenu();
+  renderExportScaleMenu();
 
   document.getElementById("prefix-input").addEventListener("change", persistSettings);
   document.getElementById("suffix-input").addEventListener("change", persistSettings);
@@ -122,6 +133,23 @@ function bindSettingsControls() {
   document.getElementById("name-btn").addEventListener("click", (event) => {
     event.stopPropagation();
     togglePopover("name-popover", "name-btn");
+  });
+
+  document.getElementById("export-scale-cancel-btn")?.addEventListener("click", () => {
+    document.getElementById("export-scale-popover").hidden = true;
+  });
+
+  document.getElementById("export-scale-add-btn")?.addEventListener("click", async () => {
+    const label = document.getElementById("export-scale-label")?.value || "";
+    const scale = document.getElementById("export-scale-value")?.value || "1";
+    try {
+      await addCustomExportScale({ label, scale });
+      document.getElementById("export-scale-popover").hidden = true;
+      document.getElementById("export-scale-label").value = "";
+      document.getElementById("export-scale-value").value = "1.5";
+    } catch (error) {
+      setStatus(String(error), true);
+    }
   });
 
   document.getElementById("prefs-btn")?.addEventListener("click", async (event) => {
@@ -173,6 +201,7 @@ function bindSettingsSync() {
     if (!settings) return;
     applySettingsToForm(settings);
     await renderMonitorMenu();
+    renderExportScaleMenu();
   });
 }
 

@@ -28,6 +28,10 @@ fn default_capture_monitor_id() -> String {
     "primary".into()
 }
 
+fn default_export_scale_preset() -> String {
+    "1".into()
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CustomPreset {
@@ -50,6 +54,14 @@ impl CustomPreset {
     pub fn aspect(&self) -> (f64, f64) {
         (self.width.max(1) as f64, self.height.max(1) as f64)
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CustomExportScale {
+    pub id: String,
+    pub label: String,
+    pub scale: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -79,6 +91,11 @@ pub struct AppSettings {
     /// `"primary"` | monitor index (`"0"`, `"1"`, …) | `"all"`
     #[serde(default = "default_capture_monitor_id")]
     pub capture_monitor_id: String,
+    /// Built-in: `"1"` | `"0.5"` | `"2"`, or a custom export scale id.
+    #[serde(default = "default_export_scale_preset")]
+    pub export_scale_preset: String,
+    #[serde(default)]
+    pub custom_export_scales: Vec<CustomExportScale>,
 }
 
 impl Default for AppSettings {
@@ -98,6 +115,8 @@ impl Default for AppSettings {
             window_brightness: default_window_brightness(),
             window_opacity: default_window_opacity(),
             capture_monitor_id: default_capture_monitor_id(),
+            export_scale_preset: default_export_scale_preset(),
+            custom_export_scales: Vec::new(),
         }
     }
 }
@@ -168,6 +187,21 @@ impl AppSettings {
                 })
                 .unwrap_or_else(|| id.to_string()),
         }
+    }
+
+    pub fn export_scale(&self) -> f64 {
+        match self.export_scale_preset.as_str() {
+            "1" => 1.0,
+            "0.5" => 0.5,
+            "2" => 2.0,
+            id => self
+                .custom_export_scales
+                .iter()
+                .find(|entry| entry.id == id)
+                .map(|entry| entry.scale)
+                .unwrap_or(1.0),
+        }
+        .clamp(0.05, 8.0)
     }
 
     /// Acrylic / tint RGBA from HSB + opacity%.

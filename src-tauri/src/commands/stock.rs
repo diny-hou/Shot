@@ -1,10 +1,12 @@
+use crate::image_utils::{extension_from_path, save_image, scale_image};
 use crate::models::StockItem;
 use crate::state::AppState;
 use arboard::{Clipboard, ImageData};
 use image::GenericImageView;
 use std::borrow::Cow;
-use std::path::PathBuf;
-use tauri::State;
+use std::path::{Path, PathBuf};
+use tauri::{AppHandle, Manager, State};
+use uuid::Uuid;
 
 #[tauri::command]
 pub async fn list_stock(state: State<'_, AppState>) -> Result<Vec<StockItem>, String> {
@@ -47,14 +49,52 @@ pub async fn clear_stock(
     Ok(())
 }
 
-#[tauri::command]
-pub async fn copy_image_to_clipboard(path: String) -> Result<(), String> {
-    let path = PathBuf::from(path);
+fn export_cache_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    let dir = app
+        .path()
+        .app_cache_dir()
+        .map_err(|e| e.to_string())?
+        .join("export");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    Ok(dir)
+}
+
+fn load_scaled_image(path: &Path, scale: f64) -> Result<image::DynamicImage, String> {
     if !path.exists() {
         return Err("Image file not found".into());
     }
+    let img = image::open(path).map_err(|e| format!("Failed to open image: {e}"))?;
+    Ok(scale_image(img, scale))
+}
 
-    let img = image::open(&path).map_err(|e| format!("Failed to open image: {e}"))?;
+#[tauri::command]
+pub async fn prepare_export_image(
+    app: AppHandle,
+    path: String,
+    scale: f64,
+) -> Result<String, String> {
+    let path = PathBuf::from(&path);
+    let scale = scale.clamp(0.05, 8.0);
+    if (scale - 1.0).abs() < 0.001 {
+        return Ok(path.to_string_lossy().to_string());
+    }
+
+    let scaled = load_scaled_image(&path, scale)?;
+    let extension = extension_from_path(&path);
+    let out = export_cache_dir(&app)?.join(format!(
+        "export_{}.{}",
+        Uuid::new_v4(),
+        extension
+    ));
+    save_image(&scaled, &out, &extension)?;
+    Ok(out.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub async fn copy_image_to_clipboard(path: String, scale: Option<f64>) -> Result<(), String> {
+    let path = PathBuf::from(path);
+    let scale = scale.unwrap_or(1.0).clamp(0.05, 8.0);
+    let img = load_scaled_image(&path, scale)?;
     let rgba = img.to_rgba8();
     let (width, height) = img.dimensions();
 

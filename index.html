@@ -18,6 +18,25 @@
         <div class="titlebar-brand" data-tauri-drag-region aria-hidden="true"></div>
 
         <div class="titlebar-controls">
+          <div
+            class="menu-select glass-inset"
+            id="monitor-menu"
+            data-tooltip="キャプチャ対象ディスプレイ"
+          >
+            <button
+              type="button"
+              class="menu-select-btn"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+              aria-label="キャプチャ対象ディスプレイ"
+            >
+              <span class="menu-select-label">ディスプレイ1</span>
+              <span class="menu-select-caret" aria-hidden="true"></span>
+            </button>
+            <div class="menu-select-panel glass" id="monitor-panel" hidden role="listbox"></div>
+            <input type="hidden" id="capture-monitor" value="primary" />
+          </div>
+
           <div class="tool-group glass-inset">
             <button id="pick-dir-btn" class="tool tool-sm" type="button" data-tooltip="保存フォルダを開く（右クリックで変更／右ドラッグで移動）" aria-label="保存フォルダ"></button>
             <button id="name-btn" class="tool tool-sm" type="button" data-tooltip="ファイル名（接頭辞・接尾辞）" aria-label="ファイル名" aria-haspopup="true"></button>
@@ -97,21 +116,21 @@
 
             <div
               class="menu-select glass-inset"
-              id="monitor-menu"
-              data-tooltip="キャプチャ対象ディスプレイ"
+              id="export-scale-menu"
+              data-tooltip="コピー／ドラッグ時のサイズ"
             >
               <button
                 type="button"
                 class="menu-select-btn"
                 aria-haspopup="listbox"
                 aria-expanded="false"
-                aria-label="キャプチャ対象ディスプレイ"
+                aria-label="エクスポート倍率"
               >
-                <span class="menu-select-label">ディスプレイ1</span>
+                <span class="menu-select-label">100%</span>
                 <span class="menu-select-caret" aria-hidden="true"></span>
               </button>
-              <div class="menu-select-panel glass" id="monitor-panel" hidden role="listbox"></div>
-              <input type="hidden" id="capture-monitor" value="primary" />
+              <div class="menu-select-panel glass" id="export-scale-panel" hidden role="listbox"></div>
+              <input type="hidden" id="export-scale-preset" value="1" />
             </div>
           </div>
 
@@ -150,6 +169,30 @@
           <input id="suffix-input" class="mini-input mono glass-input" type="text" value="" />
         </label>
         <p id="save-dir" class="save-dir mono" title=""></p>
+      </div>
+
+      <div id="export-scale-popover" class="popover glass" hidden>
+        <label class="mini-field wide">
+          <span>Label</span>
+          <input id="export-scale-label" class="mini-input mono glass-input" type="text" placeholder="150%" />
+        </label>
+        <label class="mini-field wide">
+          <span>Scale</span>
+          <input
+            id="export-scale-value"
+            class="mini-input mono glass-input"
+            type="number"
+            min="0.05"
+            max="8"
+            step="0.05"
+            value="1.5"
+            placeholder="1 = 100%, 0.5 = 50%, 2 = 200%"
+          />
+        </label>
+        <div class="popup-actions">
+          <button id="export-scale-cancel-btn" class="popover-action popover-action-ghost" type="button">キャンセル</button>
+          <button id="export-scale-add-btn" class="popover-action" type="button">追加</button>
+        </div>
       </div>
 
       <p id="status" class="status glass-chip" role="status"></p>

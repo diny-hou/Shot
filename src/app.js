@@ -171,9 +171,193 @@ export async function renderMonitorMenu() {
   document.getElementById("capture-monitor").value = monitorId;
 }
 
+function normalizeExportScale(value, settings = appState.settings) {
+  if (value === "1" || value === "0.5" || value === "2") return value;
+  const customs = settings?.customExportScales || [];
+  if (customs.some((entry) => entry.id === value)) return value;
+  return "1";
+}
+
+export function resolveExportScale(settings = appState.settings) {
+  const id = normalizeExportScale(settings?.exportScalePreset || "1", settings);
+  if (id === "1") return 1;
+  if (id === "0.5") return 0.5;
+  if (id === "2") return 2;
+  const custom = (settings?.customExportScales || []).find((entry) => entry.id === id);
+  return Math.min(8, Math.max(0.05, Number(custom?.scale) || 1));
+}
+
+function formatScaleMeta(scale) {
+  const value = Number(scale);
+  if (!Number.isFinite(value) || value <= 0) return "";
+  if (Math.abs(value - 0.5) < 0.001) return "1/2";
+  if (Math.abs(value - 2) < 0.001) return "2×";
+  if (Math.abs(value - 1) < 0.001) return "等倍";
+  if (Math.abs(value - Math.round(value)) < 0.001) return `${Math.round(value)}×`;
+  return `${Math.round(value * 100)}%`;
+}
+
+export function exportScaleLabel(value, settings = appState.settings) {
+  const id = normalizeExportScale(value, settings);
+  const builtin = BUILTIN_EXPORT_SCALES.find((entry) => entry.id === id);
+  if (builtin) return builtin.label;
+  const custom = (settings?.customExportScales || []).find((entry) => entry.id === id);
+  if (custom) return custom.label || formatScaleMeta(custom.scale);
+  return "100%";
+}
+
+export async function getExportPathForItem(item, settings = appState.settings) {
+  const scale = resolveExportScale(settings);
+  if (Math.abs(scale - 1) < 0.001) return item.path;
+  return api("prepare_export_image", { path: item.path, scale });
+}
+
+export function renderExportScaleMenu() {
+  const panel = document.getElementById("export-scale-panel");
+  const root = document.getElementById("export-scale-menu");
+  if (!panel || !root) return;
+
+  const settings = appState.settings || {};
+  const current = normalizeExportScale(
+    document.getElementById("export-scale-preset")?.value || settings.exportScalePreset,
+    settings,
+  );
+  const customs = settings.customExportScales || [];
+
+  panel.replaceChildren();
+
+  for (const preset of BUILTIN_EXPORT_SCALES) {
+    panel.appendChild(makeExportScaleOption(preset.id, preset.label, preset.meta, current));
+  }
+
+  if (customs.length) {
+    const divider = document.createElement("div");
+    divider.className = "menu-select-divider";
+    panel.appendChild(divider);
+
+    for (const preset of customs) {
+      const label = preset.label || formatScaleMeta(preset.scale);
+      panel.appendChild(
+        makeExportScaleOption(preset.id, label, formatScaleMeta(preset.scale), current, {
+          removable: true,
+        }),
+      );
+    }
+  }
+
+  const divider2 = document.createElement("div");
+  divider2.className = "menu-select-divider";
+  panel.appendChild(divider2);
+
+  const addBtn = document.createElement("button");
+  addBtn.type = "button";
+  addBtn.className = "menu-select-action";
+  addBtn.textContent = "スケールを追加…";
+  addBtn.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openExportScalePopover();
+  });
+  panel.appendChild(addBtn);
+
+  setMenuSelectValue(root, current, exportScaleLabel(current, settings));
+  document.getElementById("export-scale-preset").value = current;
+}
+
+function makeExportScaleOption(id, label, meta, current, options = {}) {
+  const { removable = false } = options;
+  const opt = document.createElement(removable ? "div" : "button");
+  if (!removable) opt.type = "button";
+  opt.className = "menu-select-option";
+  opt.dataset.value = id;
+  opt.dataset.label = label;
+  opt.setAttribute("role", "option");
+  opt.classList.toggle("is-active", id === current);
+  opt.setAttribute("aria-selected", String(id === current));
+
+  const text = document.createElement("span");
+  text.className = "menu-select-option-text";
+  text.textContent = label;
+  opt.appendChild(text);
+
+  if (meta) {
+    const metaEl = document.createElement("span");
+    metaEl.className = "menu-select-option-meta";
+    metaEl.textContent = meta;
+    opt.appendChild(metaEl);
+  }
+
+  if (removable) {
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "menu-select-remove";
+    remove.title = "削除";
+    remove.textContent = "×";
+    remove.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      await removeCustomExportScale(id);
+    });
+    opt.appendChild(remove);
+  }
+
+  return opt;
+}
+
+export function openExportScalePopover() {
+  closeAllMenuSelects();
+  document.querySelectorAll(".popover").forEach((el) => {
+    if (el.id !== "export-scale-popover") el.hidden = true;
+  });
+  const popover = document.getElementById("export-scale-popover");
+  const anchor = document.getElementById("export-scale-menu");
+  if (!popover || !anchor) return;
+  const rect = anchor.getBoundingClientRect();
+  popover.style.left = `${Math.max(6, rect.left - 4)}px`;
+  popover.style.top = `${rect.bottom + 4}px`;
+  popover.hidden = false;
+}
+
+export async function addCustomExportScale({ label, scale }) {
+  const value = Math.min(8, Math.max(0.05, Number(scale) || 1));
+  const fallback = formatScaleMeta(value);
+  const name = (label || fallback).trim() || fallback;
+  const id = `export_${Date.now().toString(36)}`;
+  const settings = { ...(appState.settings || {}) };
+  settings.customExportScales = [
+    ...(settings.customExportScales || []),
+    { id, label: name, scale: value },
+  ];
+  settings.exportScalePreset = id;
+  await api("save_settings", { settings });
+  appState.settings = settings;
+  applySettingsToForm(settings);
+  setStatus(`Export → ${name}`);
+  return id;
+}
+
+export async function removeCustomExportScale(id) {
+  const settings = { ...(appState.settings || {}) };
+  const next = (settings.customExportScales || []).filter((entry) => entry.id !== id);
+  settings.customExportScales = next;
+  if (settings.exportScalePreset === id) {
+    settings.exportScalePreset = "1";
+  }
+  await api("save_settings", { settings });
+  appState.settings = settings;
+  applySettingsToForm(settings);
+  setStatus("Export scale removed");
+}
+
 const BUILTIN_PRESETS = [
   { id: "square" },
   { id: "ratio16x9" },
+];
+
+const BUILTIN_EXPORT_SCALES = [
+  { id: "1", label: "100%", meta: "等倍" },
+  { id: "0.5", label: "50%", meta: "1/2" },
+  { id: "2", label: "200%", meta: "2×" },
 ];
 
 const DEFAULT_TINT = {
@@ -560,6 +744,11 @@ export function readSettingsFromForm() {
       document.getElementById("capture-monitor")?.value ||
       appState.settings?.captureMonitorId ||
       "primary",
+    exportScalePreset:
+      document.getElementById("export-scale-preset")?.value ||
+      appState.settings?.exportScalePreset ||
+      "1",
+    customExportScales: appState.settings?.customExportScales || [],
   };
 }
 
@@ -589,6 +778,14 @@ export function applySettingsToForm(settings) {
   if (monitorRoot) {
     setMenuSelectValue(monitorRoot, monitorId, monitorMenuLabel(monitorId));
   }
+
+  const exportScale = normalizeExportScale(settings.exportScalePreset, settings);
+  const exportRoot = document.getElementById("export-scale-menu");
+  document.getElementById("export-scale-preset").value = exportScale;
+  if (exportRoot) {
+    setMenuSelectValue(exportRoot, exportScale, exportScaleLabel(exportScale, settings));
+  }
+  renderExportScaleMenu();
 
   document.getElementById("prefix-input").value = settings.prefix;
   document.getElementById("suffix-input").value = settings.suffix;
@@ -673,7 +870,7 @@ export function renderStock() {
     button.className = "stock-item";
     button.dataset.id = item.id;
     button.draggable = true;
-    button.dataset.tooltip = `${item.filename} · クリック: フォルダ · Ctrl+クリック: コピー · ドラッグ: 書き出し`;
+    button.dataset.tooltip = `${item.filename} · クリック: フォルダ · Ctrl+クリック: コピー · ドラッグ: 書き出し（倍率適用）`;
 
     const frame = document.createElement("div");
     frame.className = "stock-frame";
@@ -702,9 +899,10 @@ export function renderStock() {
       appState.currentItem = item;
       renderStock();
       try {
+        const exportPath = await getExportPathForItem(item);
         await startDrag({
-          item: [item.path],
-          icon: item.path,
+          item: [exportPath],
+          icon: exportPath,
         });
         setStatus("Dragging");
       } catch (error) {
@@ -746,10 +944,12 @@ export async function selectStockItem(id, { reveal = true } = {}) {
 
 export async function copyStockToClipboard(item) {
   try {
-    await api("copy_image_to_clipboard", { path: item.path });
+    const scale = resolveExportScale(appState.settings);
+    await api("copy_image_to_clipboard", { path: item.path, scale });
     appState.currentItem = item;
     renderStock();
-    setStatus("Copied to clipboard");
+    const label = exportScaleLabel(appState.settings?.exportScalePreset || "1");
+    setStatus(`Copied (${label})`);
   } catch (error) {
     setStatus(String(error), true);
   }

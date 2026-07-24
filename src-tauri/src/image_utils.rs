@@ -103,6 +103,24 @@ pub fn apply_preset_size(img: DynamicImage, width: f64, height: f64, exact: bool
     cropped.resize_exact(tw, th, image::imageops::FilterType::Lanczos3)
 }
 
+pub fn scale_image(img: DynamicImage, scale: f64) -> DynamicImage {
+    let scale = scale.clamp(0.05, 8.0);
+    if (scale - 1.0).abs() < 0.001 {
+        return img;
+    }
+    let (width, height) = img.dimensions();
+    let new_w = ((width as f64 * scale).round() as u32).max(1);
+    let new_h = ((height as f64 * scale).round() as u32).max(1);
+    img.resize_exact(new_w, new_h, image::imageops::FilterType::Lanczos3)
+}
+
+pub fn extension_from_path(path: &Path) -> String {
+    path.extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or("png")
+        .to_lowercase()
+}
+
 pub fn image_to_data_url(img: &DynamicImage, extension: &str) -> Result<String, String> {
     let mut buffer = Vec::new();
     match extension {
