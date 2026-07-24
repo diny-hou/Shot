@@ -72,6 +72,7 @@ pub fn run() {
             commands::settings::save_settings,
             commands::settings::pick_save_dir,
             commands::settings::get_save_dir,
+            commands::settings::clear_save_dir,
             commands::settings::set_always_on_top,
             commands::capture::capture_fullscreen,
             commands::capture::capture_region,

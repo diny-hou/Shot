@@ -37,6 +37,13 @@
           <span>Brightness <em id="prefs-bri-val">8</em>%</span>
           <input id="prefs-bri" type="range" min="0" max="60" step="1" value="8" />
         </label>
+        <p class="prefs-subtitle prefs-section-gap">保存フォルダ</p>
+        <p id="prefs-save-dir" class="prefs-save-dir mono" title="">Default folder</p>
+        <div class="prefs-dir-actions">
+          <button id="prefs-save-dir-btn" class="popover-action" type="button">変更…</button>
+          <button id="prefs-save-dir-open-btn" class="popover-action popover-action-ghost" type="button">開く</button>
+          <button id="prefs-save-dir-reset-btn" class="popover-action popover-action-ghost" type="button">デフォルト</button>
+        </div>
         <p class="prefs-subtitle prefs-section-gap">アップデート</p>
         <p class="prefs-version mono">v<span id="prefs-version">0.1.0</span></p>
         <button id="prefs-update-btn" class="popover-action" type="button">アップデートを確認</button>

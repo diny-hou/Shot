@@ -2,7 +2,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { getVersion } from "@tauri-apps/api/app";
 import { check } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
+import { openPath } from "@tauri-apps/plugin-opener";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { listen } from "@tauri-apps/api/event";
 import { icon } from "./icons.js";
 import { bindRightDragMove } from "./right-drag-move.js";
 import "./disable-context-menu.js";
@@ -73,6 +75,21 @@ function syncPrefsForm(settings) {
     windowSaturation: sat,
     windowBrightness: bri,
   });
+  void syncSaveDirLabel(settings);
+}
+
+async function syncSaveDirLabel(settings) {
+  const el = document.getElementById("prefs-save-dir");
+  if (!el) return;
+  try {
+    const dir = await invoke("get_save_dir");
+    el.textContent = dir;
+    el.title = dir;
+  } catch {
+    const fallback = settings?.saveDir || "Default folder";
+    el.textContent = fallback;
+    el.title = fallback;
+  }
 }
 
 function readPrefsFromForm() {
@@ -155,6 +172,43 @@ window.addEventListener("DOMContentLoaded", async () => {
 
   document.getElementById("prefs-update-btn")?.addEventListener("click", () => {
     void runUpdate();
+  });
+
+  document.getElementById("prefs-save-dir-btn")?.addEventListener("click", async () => {
+    try {
+      const dir = await invoke("pick_save_dir");
+      if (!dir) return;
+      const settings = await invoke("get_settings");
+      const next = { ...settings, saveDir: dir };
+      await invoke("save_settings", { settings: next });
+      await syncSaveDirLabel(next);
+    } catch (error) {
+      console.error(error);
+    }
+  });
+
+  document.getElementById("prefs-save-dir-open-btn")?.addEventListener("click", async () => {
+    try {
+      const dir = await invoke("get_save_dir");
+      await openPath(dir);
+    } catch (error) {
+      console.error(error);
+    }
+  });
+
+  document.getElementById("prefs-save-dir-reset-btn")?.addEventListener("click", async () => {
+    try {
+      await invoke("clear_save_dir");
+      const settings = await invoke("get_settings");
+      await syncSaveDirLabel(settings);
+    } catch (error) {
+      console.error(error);
+    }
+  });
+
+  listen("settings-updated", (event) => {
+    if (!event.payload) return;
+    syncPrefsForm(event.payload);
   });
 
   let tintSaveTimer = null;

@@ -8,6 +8,7 @@ import {
   handleCaptureResult,
   openPrefsPopup,
   openSaveFolder,
+  pickSaveDirectory,
   persistSettings,
   refreshStock,
   renderPresetMenu,
@@ -163,7 +164,7 @@ function bindSettingsControls() {
 
   document.getElementById("pick-dir-btn").addEventListener("click", async () => {
     try {
-      await openSaveFolder();
+      await pickSaveDirectory();
     } catch (error) {
       setStatus(String(error), true);
     }
@@ -171,14 +172,28 @@ function bindSettingsControls() {
 
   document.getElementById("pick-dir-btn").addEventListener("contextmenu", async (event) => {
     event.preventDefault();
-    const dir = await api("pick_save_dir");
-    if (dir) {
-      appState.settings = { ...appState.settings, saveDir: dir };
-      const saveDirEl = document.getElementById("save-dir");
-      saveDirEl.textContent = dir;
-      saveDirEl.title = dir;
-      await persistSettings();
-      setStatus("Folder updated");
+    try {
+      await openSaveFolder();
+    } catch (error) {
+      setStatus(String(error), true);
+    }
+  });
+
+  document.getElementById("save-dir-change-btn")?.addEventListener("click", async (event) => {
+    event.stopPropagation();
+    try {
+      await pickSaveDirectory();
+    } catch (error) {
+      setStatus(String(error), true);
+    }
+  });
+
+  document.getElementById("save-dir-open-btn")?.addEventListener("click", async (event) => {
+    event.stopPropagation();
+    try {
+      await openSaveFolder();
+    } catch (error) {
+      setStatus(String(error), true);
     }
   });
 

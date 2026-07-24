@@ -82,7 +82,7 @@ pub async fn close_preset_add_window(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn open_prefs_window(app: AppHandle) -> Result<(), String> {
-    open_or_focus(&app, "prefs", "Preferences", "prefs.html", 320.0, 360.0)
+    open_or_focus(&app, "prefs", "Preferences", "prefs.html", 320.0, 460.0)
 }
 
 #[tauri::command]

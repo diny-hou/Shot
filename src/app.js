@@ -825,6 +825,30 @@ export async function openSaveFolder() {
   setStatus("Opened folder");
 }
 
+export async function pickSaveDirectory() {
+  const dir = await api("pick_save_dir");
+  if (!dir) return null;
+
+  const settings = {
+    ...(appState.settings || {}),
+    saveDir: dir,
+  };
+  await api("save_settings", { settings });
+  appState.settings = settings;
+  applySettingsToForm(settings);
+  setStatus("Folder updated");
+  return dir;
+}
+
+export async function resetSaveDirectory() {
+  const dir = await api("clear_save_dir");
+  const settings = await api("get_settings");
+  appState.settings = settings;
+  applySettingsToForm(settings);
+  setStatus("Default folder");
+  return dir;
+}
+
 export async function revealInSaveFolder(path) {
   await revealItemInDir(path);
   setStatus("Revealed in folder");

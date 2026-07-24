@@ -38,7 +38,7 @@
           </div>
 
           <div class="tool-group glass-inset">
-            <button id="pick-dir-btn" class="tool tool-sm" type="button" data-tooltip="保存フォルダを開く（右クリックで変更／右ドラッグで移動）" aria-label="保存フォルダ"></button>
+            <button id="pick-dir-btn" class="tool tool-sm" type="button" data-tooltip="保存フォルダを変更（クリックでダイアログ／右クリックで開く）" aria-label="保存フォルダ"></button>
             <button id="name-btn" class="tool tool-sm" type="button" data-tooltip="ファイル名（接頭辞・接尾辞）" aria-label="ファイル名" aria-haspopup="true"></button>
             <button id="clear-stock-btn" class="tool tool-sm" type="button" data-tooltip="ストックをクリア" aria-label="ストックをクリア"></button>
             <button id="prefs-btn" class="tool tool-sm" type="button" data-tooltip="Preferences" aria-label="Preferences"></button>
@@ -168,7 +168,12 @@
           <span>Suffix</span>
           <input id="suffix-input" class="mini-input mono glass-input" type="text" value="" />
         </label>
+        <p class="prefs-subtitle">保存フォルダ</p>
         <p id="save-dir" class="save-dir mono" title=""></p>
+        <div class="popup-actions save-dir-actions">
+          <button id="save-dir-change-btn" class="popover-action" type="button">変更…</button>
+          <button id="save-dir-open-btn" class="popover-action popover-action-ghost" type="button">開く</button>
+        </div>
       </div>
 
       <div id="export-scale-popover" class="popover glass" hidden>
