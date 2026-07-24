@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { bindRightDragMove } from "./right-drag-move.js";
@@ -8,6 +9,11 @@ const windowRef = getCurrentWebviewWindow();
 const frameTop = document.getElementById("frame-top");
 const closeBtn = document.getElementById("frame-close-btn");
 const captureBtn = document.getElementById("frame-capture-btn");
+const presetMenu = document.getElementById("frame-preset-menu");
+const presetBtn = document.getElementById("frame-preset-btn");
+const presetPanel = document.getElementById("frame-preset-panel");
+const presetLabel = document.getElementById("frame-preset-label");
+const presetSaveBtn = document.getElementById("frame-preset-save-btn");
 
 const RESIZE_DIRS = {
   n: "North",
@@ -20,7 +26,8 @@ const RESIZE_DIRS = {
   sw: "SouthWest",
 };
 
-const NO_DRAG_SELECTOR = "#frame-close-btn, #frame-capture-btn";
+const NO_DRAG_SELECTOR =
+  "#frame-close-btn, #frame-capture-btn, #frame-preset-menu, #frame-preset-save-btn, .frame-preset-panel";
 
 let moving = false;
 let movePointerId = null;
@@ -30,6 +37,8 @@ let scale = 1;
 let rafId = 0;
 let pendingPos = null;
 let capturing = false;
+let presets = [];
+let activePresetId = null;
 
 function applyPendingPos() {
   rafId = 0;
@@ -52,6 +61,7 @@ async function beginMove(event) {
 
   event.preventDefault();
   event.stopPropagation();
+  closePresetPanel();
 
   moving = false;
   movePointerId = event.pointerId;
@@ -100,6 +110,7 @@ function beginResize(event, dir) {
   if (event.button !== 0) return;
   event.preventDefault();
   event.stopPropagation();
+  closePresetPanel();
 
   const direction = RESIZE_DIRS[dir];
   if (!direction) return;
@@ -113,6 +124,7 @@ async function captureFromFrame() {
   if (capturing) return;
   capturing = true;
   captureBtn.disabled = true;
+  closePresetPanel();
   try {
     await invoke("capture_frame");
   } catch (error) {
@@ -131,8 +143,146 @@ function startClickThroughSync() {
   setInterval(tick, 32);
 }
 
+function closePresetPanel() {
+  if (!presetPanel || !presetBtn || !presetMenu) return;
+  presetPanel.hidden = true;
+  presetBtn.setAttribute("aria-expanded", "false");
+  presetMenu.classList.remove("is-open");
+  void invoke("set_frame_menu_interactive", { enabled: false }).catch(() => {});
+}
+
+function openPresetPanel() {
+  if (!presetPanel || !presetBtn || !presetMenu) return;
+  presetPanel.hidden = false;
+  presetBtn.setAttribute("aria-expanded", "true");
+  presetMenu.classList.add("is-open");
+  void invoke("set_frame_menu_interactive", { enabled: true }).catch(() => {});
+}
+
+function togglePresetPanel(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  if (presetPanel?.hidden) {
+    openPresetPanel();
+  } else {
+    closePresetPanel();
+  }
+}
+
+function formatPresetMeta(preset) {
+  const w = Math.round(Number(preset.width) || 0);
+  const h = Math.round(Number(preset.height) || 0);
+  return `${w}×${h}`;
+}
+
+function setActivePreset(id) {
+  activePresetId = id || null;
+  const preset = presets.find((entry) => entry.id === activePresetId);
+  if (presetLabel) {
+    presetLabel.textContent = preset?.label || "プリセット";
+  }
+  renderPresetPanel();
+}
+
+function renderPresetPanel() {
+  if (!presetPanel) return;
+  presetPanel.replaceChildren();
+
+  if (!presets.length) {
+    const empty = document.createElement("div");
+    empty.className = "frame-preset-empty";
+    empty.textContent = "保存済みプリセットなし";
+    presetPanel.appendChild(empty);
+    return;
+  }
+
+  for (const preset of presets) {
+    const row = document.createElement("div");
+    row.className = "frame-preset-option";
+    row.classList.toggle("is-active", preset.id === activePresetId);
+    row.dataset.id = preset.id;
+    row.setAttribute("role", "option");
+
+    const text = document.createElement("span");
+    text.className = "frame-preset-option-text";
+    text.textContent = preset.label;
+    row.appendChild(text);
+
+    const meta = document.createElement("span");
+    meta.className = "frame-preset-option-meta";
+    meta.textContent = formatPresetMeta(preset);
+    row.appendChild(meta);
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "frame-preset-remove";
+    remove.title = "削除";
+    remove.textContent = "×";
+    remove.addEventListener("click", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      try {
+        await invoke("delete_frame_layout_preset", { id: preset.id });
+        if (activePresetId === preset.id) {
+          activePresetId = null;
+          if (presetLabel) presetLabel.textContent = "プリセット";
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    });
+    row.appendChild(remove);
+
+    row.addEventListener("click", async (event) => {
+      if (event.target.closest(".frame-preset-remove")) return;
+      event.preventDefault();
+      event.stopPropagation();
+      try {
+        await invoke("apply_frame_layout_preset", { id: preset.id });
+        setActivePreset(preset.id);
+        closePresetPanel();
+      } catch (error) {
+        console.error(error);
+      }
+    });
+
+    presetPanel.appendChild(row);
+  }
+}
+
+async function refreshPresets() {
+  try {
+    presets = await invoke("list_frame_layout_presets");
+  } catch (error) {
+    console.error(error);
+    presets = [];
+  }
+  if (activePresetId && !presets.some((entry) => entry.id === activePresetId)) {
+    activePresetId = null;
+  }
+  if (presetLabel && !activePresetId) {
+    presetLabel.textContent = "プリセット";
+  }
+  renderPresetPanel();
+}
+
+async function saveCurrentLayout() {
+  closePresetPanel();
+  const defaultName = "";
+  const label = window.prompt("プリセット名（空欄でサイズ名）", defaultName);
+  if (label === null) return;
+  try {
+    const preset = await invoke("save_frame_layout_preset", { label });
+    await refreshPresets();
+    setActivePreset(preset.id);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 bindRightDragMove(windowRef);
 startClickThroughSync();
+void refreshPresets();
 
 frameTop.addEventListener("pointerdown", (event) => {
   void beginMove(event);
@@ -159,9 +309,41 @@ closeBtn?.addEventListener("click", async (event) => {
   await invoke("close_frame_window");
 });
 
+presetBtn?.addEventListener("click", togglePresetPanel);
+presetSaveBtn?.addEventListener("click", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  void saveCurrentLayout();
+});
+
+document.addEventListener("click", (event) => {
+  if (!(event.target instanceof Element)) return;
+  if (event.target.closest("#frame-preset-menu")) return;
+  closePresetPanel();
+});
+
+listen("frame-layout-presets-changed", (event) => {
+  presets = Array.isArray(event.payload) ? event.payload : [];
+  if (activePresetId && !presets.some((entry) => entry.id === activePresetId)) {
+    activePresetId = null;
+    if (presetLabel) presetLabel.textContent = "プリセット";
+  }
+  renderPresetPanel();
+});
+
+listen("frame-layout-applied", (event) => {
+  if (typeof event.payload === "string") {
+    setActivePreset(event.payload);
+  }
+});
+
 window.addEventListener("keydown", async (event) => {
   if (event.key === "Escape") {
     event.preventDefault();
+    if (!presetPanel?.hidden) {
+      closePresetPanel();
+      return;
+    }
     await invoke("close_frame_window");
     return;
   }

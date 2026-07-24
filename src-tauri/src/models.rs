@@ -65,6 +65,18 @@ pub struct CustomExportScale {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FrameLayoutPreset {
+    pub id: String,
+    pub label: String,
+    /// Logical outer window position / size.
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct AppSettings {
     pub extension: String,
@@ -96,6 +108,8 @@ pub struct AppSettings {
     pub export_scale_preset: String,
     #[serde(default)]
     pub custom_export_scales: Vec<CustomExportScale>,
+    #[serde(default)]
+    pub frame_layout_presets: Vec<FrameLayoutPreset>,
 }
 
 impl Default for AppSettings {
@@ -117,6 +131,7 @@ impl Default for AppSettings {
             capture_monitor_id: default_capture_monitor_id(),
             export_scale_preset: default_export_scale_preset(),
             custom_export_scales: Vec::new(),
+            frame_layout_presets: Vec::new(),
         }
     }
 }

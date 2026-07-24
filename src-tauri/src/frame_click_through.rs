@@ -8,6 +8,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::WebviewWindow;
 
 static LAST_IGNORE: AtomicBool = AtomicBool::new(false);
+static MENU_INTERACTIVE: AtomicBool = AtomicBool::new(false);
 
 /// Remove any OS window region so DWM keeps a normal rectangular window.
 #[cfg(windows)]
@@ -26,6 +27,20 @@ pub fn clear_frame_window_region(_window: &WebviewWindow) -> Result<(), String> 
     Ok(())
 }
 
+/// Keep the whole frame interactive while a chrome dropdown is open.
+pub fn set_frame_menu_interactive(window: &WebviewWindow, enabled: bool) -> Result<(), String> {
+    MENU_INTERACTIVE.store(enabled, Ordering::SeqCst);
+    if enabled {
+        LAST_IGNORE.store(false, Ordering::SeqCst);
+        window
+            .set_ignore_cursor_events(false)
+            .map_err(|e| e.to_string())?;
+    } else {
+        sync_frame_click_through(window)?;
+    }
+    Ok(())
+}
+
 /// Called on open / resize: clear region and reset ignore state.
 pub fn apply_frame_click_through(window: &WebviewWindow) -> Result<(), String> {
     clear_frame_window_region(window)?;
@@ -38,6 +53,15 @@ pub fn apply_frame_click_through(window: &WebviewWindow) -> Result<(), String> {
 
 /// Poll: ignore cursor events when the pointer is over the transparent hole.
 pub fn sync_frame_click_through(window: &WebviewWindow) -> Result<(), String> {
+    if MENU_INTERACTIVE.load(Ordering::SeqCst) {
+        if LAST_IGNORE.swap(false, Ordering::SeqCst) {
+            window
+                .set_ignore_cursor_events(false)
+                .map_err(|e| e.to_string())?;
+        }
+        return Ok(());
+    }
+
     #[cfg(windows)]
     {
         use windows::Win32::Foundation::{POINT, RECT};

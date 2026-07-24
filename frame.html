@@ -9,7 +9,37 @@
   <body class="frame-body">
     <div id="frame-root" class="frame-root">
       <div id="frame-top" class="frame-top" title="ドラッグで移動">
-        <div class="frame-top-spacer" aria-hidden="true"></div>
+        <div class="frame-top-left">
+          <div class="frame-preset" id="frame-preset-menu">
+            <button
+              id="frame-preset-btn"
+              class="frame-preset-btn"
+              type="button"
+              title="枠プリセット"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+              aria-label="枠プリセット"
+            >
+              <span id="frame-preset-label" class="frame-preset-label">プリセット</span>
+              <span class="frame-preset-caret" aria-hidden="true"></span>
+            </button>
+            <div id="frame-preset-panel" class="frame-preset-panel" hidden role="listbox"></div>
+          </div>
+          <button
+            id="frame-preset-save-btn"
+            class="frame-icon-btn"
+            type="button"
+            title="現在の位置・サイズを保存"
+            aria-label="現在の位置・サイズを保存"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M6 4.5h9.5L18.5 7.5V19a1 1 0 01-1 1H6a1 1 0 01-1-1V5.5a1 1 0 011-1z" />
+              <path d="M8 4.5v5h7.5v-5" />
+              <path d="M8 16h8" />
+            </svg>
+          </button>
+        </div>
+
         <button
           id="frame-capture-btn"
           class="frame-capture"

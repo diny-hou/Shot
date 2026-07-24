@@ -749,6 +749,7 @@ export function readSettingsFromForm() {
       appState.settings?.exportScalePreset ||
       "1",
     customExportScales: appState.settings?.customExportScales || [],
+    frameLayoutPresets: appState.settings?.frameLayoutPresets || [],
   };
 }
 

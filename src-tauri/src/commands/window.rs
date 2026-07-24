@@ -150,6 +150,124 @@ pub async fn apply_frame_preset(app: AppHandle, state: tauri::State<'_, AppState
     apply_preset_to_frame(&app, &settings)
 }
 
+fn frame_logical_geometry(window: &tauri::WebviewWindow) -> Result<(f64, f64, f64, f64), String> {
+    let scale = window.scale_factor().map_err(|e| e.to_string())?;
+    let position = window.outer_position().map_err(|e| e.to_string())?;
+    let size = window.outer_size().map_err(|e| e.to_string())?;
+    Ok((
+        position.x as f64 / scale,
+        position.y as f64 / scale,
+        size.width as f64 / scale,
+        size.height as f64 / scale,
+    ))
+}
+
+fn apply_frame_layout(
+    app: &AppHandle,
+    x: f64,
+    y: f64,
+    width: f64,
+    height: f64,
+) -> Result<(), String> {
+    let window = app
+        .get_webview_window("frame")
+        .ok_or_else(|| "Frame mode is not open".to_string())?;
+    let width = width.max(120.0);
+    let height = height.max(100.0);
+    window
+        .set_size(tauri::Size::Logical(tauri::LogicalSize::new(width, height)))
+        .map_err(|e| e.to_string())?;
+    window
+        .set_position(tauri::Position::Logical(tauri::LogicalPosition::new(x, y)))
+        .map_err(|e| e.to_string())?;
+    let _ = apply_frame_click_through(&window);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn list_frame_layout_presets(
+    app: AppHandle,
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<crate::models::FrameLayoutPreset>, String> {
+    let settings = state.load_settings(&app)?;
+    Ok(settings.frame_layout_presets)
+}
+
+#[tauri::command]
+pub async fn save_frame_layout_preset(
+    app: AppHandle,
+    state: tauri::State<'_, AppState>,
+    label: String,
+) -> Result<crate::models::FrameLayoutPreset, String> {
+    let window = app
+        .get_webview_window("frame")
+        .ok_or_else(|| "Frame mode is not open".to_string())?;
+    let (x, y, width, height) = frame_logical_geometry(&window)?;
+    let (cw, ch) = content_size_from_outer(width, height);
+    let name = {
+        let trimmed = label.trim();
+        if trimmed.is_empty() {
+            format!("{}×{}", cw.round() as i32, ch.round() as i32)
+        } else {
+            trimmed.to_string()
+        }
+    };
+
+    let preset = crate::models::FrameLayoutPreset {
+        id: format!("frame_{}", uuid::Uuid::new_v4().simple()),
+        label: name,
+        x,
+        y,
+        width,
+        height,
+    };
+
+    let mut settings = state.load_settings(&app)?;
+    settings.frame_layout_presets.push(preset.clone());
+    state.save_settings(&app, &settings)?;
+    let _ = app.emit("settings-updated", &settings);
+    let _ = app.emit("frame-layout-presets-changed", &settings.frame_layout_presets);
+    Ok(preset)
+}
+
+#[tauri::command]
+pub async fn apply_frame_layout_preset(
+    app: AppHandle,
+    state: tauri::State<'_, AppState>,
+    id: String,
+) -> Result<(), String> {
+    let settings = state.load_settings(&app)?;
+    let preset = settings
+        .frame_layout_presets
+        .iter()
+        .find(|entry| entry.id == id)
+        .cloned()
+        .ok_or_else(|| "Frame layout preset not found".to_string())?;
+    apply_frame_layout(&app, preset.x, preset.y, preset.width, preset.height)?;
+    let _ = app.emit("frame-layout-applied", preset.id);
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn delete_frame_layout_preset(
+    app: AppHandle,
+    state: tauri::State<'_, AppState>,
+    id: String,
+) -> Result<(), String> {
+    let mut settings = state.load_settings(&app)?;
+    let before = settings.frame_layout_presets.len();
+    settings
+        .frame_layout_presets
+        .retain(|entry| entry.id != id);
+    if settings.frame_layout_presets.len() == before {
+        return Err("Frame layout preset not found".to_string());
+    }
+    state.save_settings(&app, &settings)?;
+    let _ = app.emit("settings-updated", &settings);
+    let _ = app.emit("frame-layout-presets-changed", &settings.frame_layout_presets);
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn open_frame_window(app: AppHandle, state: tauri::State<'_, AppState>) -> Result<(), String> {
     let settings = state.load_settings(&app)?;
@@ -223,6 +341,7 @@ pub async fn open_frame_window(app: AppHandle, state: tauri::State<'_, AppState>
 #[tauri::command]
 pub async fn close_frame_window(app: AppHandle) -> Result<(), String> {
     if let Some(window) = app.get_webview_window("frame") {
+        let _ = crate::frame_click_through::set_frame_menu_interactive(&window, false);
         window.close().map_err(|e| e.to_string())?;
     }
     let _ = app.emit("frame-mode-changed", false);
@@ -254,6 +373,14 @@ pub async fn sync_frame_click_through(app: AppHandle) -> Result<(), String> {
         return Ok(());
     };
     sync_hit(&window)
+}
+
+#[tauri::command]
+pub async fn set_frame_menu_interactive(app: AppHandle, enabled: bool) -> Result<(), String> {
+    let Some(window) = app.get_webview_window("frame") else {
+        return Ok(());
+    };
+    crate::frame_click_through::set_frame_menu_interactive(&window, enabled)
 }
 
 #[tauri::command]
