@@ -32,7 +32,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE0OEU0NTZDNUI1QTBDMDgKUldRSURGcGJiRVdPRkRzV0NxMCtCenlwWTFpbmx0UGtXc1ZYVU9wZDJUNkxvaVowaXNXWTVYWmwK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJCQkRCQkNDNjE2RUFDNzMKUldSenJHNWh6THU5dXlxUlIxb1RoVFg3MUw0TU9jdkRBaEZnNG9mNGNUbXJCSy9Mb1dlcVpOK08K",
       "endpoints": [
         "https://github.com/diny-hou/Shot/releases/latest/download/latest.json"
       ]
