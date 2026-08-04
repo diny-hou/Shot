@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ja">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>プリセットを追加</title>
+    <title>Add preset</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -15,17 +15,17 @@
   <body class="popout-body">
     <div class="popout-shell glass">
       <header class="popout-titlebar" data-tauri-drag-region>
-        <p class="popout-title" data-tauri-drag-region>プリセットを追加</p>
-        <button id="popout-close" class="tool tool-sm win-btn win-btn-close" type="button" aria-label="閉じる"></button>
+        <p class="popout-title" data-tauri-drag-region>Add preset</p>
+        <button id="popout-close" class="tool tool-sm win-btn win-btn-close" type="button" aria-label="Close"></button>
       </header>
       <div class="popout-content">
-        <div class="seg-toggle" id="preset-kind-toggle" role="group" aria-label="プリセット種類">
-          <button type="button" class="seg-toggle-btn is-active" data-kind="resolution">解像度</button>
-          <button type="button" class="seg-toggle-btn" data-kind="ratio">比率</button>
+        <div class="seg-toggle" id="preset-kind-toggle" role="group" aria-label="Preset type">
+          <button type="button" class="seg-toggle-btn is-active" data-kind="resolution">Resolution</button>
+          <button type="button" class="seg-toggle-btn" data-kind="ratio">Ratio</button>
         </div>
         <label class="mini-field wide">
-          <span>名前</span>
-          <input id="preset-name-input" class="mini-input glass-input" type="text" placeholder="例: フルHD" />
+          <span>Name</span>
+          <input id="preset-name-input" class="mini-input glass-input" type="text" placeholder="e.g. Full HD" />
         </label>
         <div class="preset-ratio-row">
           <label class="mini-field">
@@ -39,8 +39,8 @@
           </label>
         </div>
         <div class="popup-actions">
-          <button id="preset-popup-cancel" class="popover-action popover-action-ghost" type="button">キャンセル</button>
-          <button id="preset-save-btn" class="popover-action" type="button">追加</button>
+          <button id="preset-popup-cancel" class="popover-action popover-action-ghost" type="button">Cancel</button>
+          <button id="preset-save-btn" class="popover-action" type="button">Add</button>
         </div>
       </div>
     </div>

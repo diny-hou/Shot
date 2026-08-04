@@ -119,23 +119,23 @@ async function runUpdate() {
 
   updateBtn.disabled = true;
   try {
-    statusEl.textContent = "確認中…";
+    statusEl.textContent = "Checking…";
     const update = await check();
     if (!update) {
-      statusEl.textContent = "最新です";
+      statusEl.textContent = "You are up to date";
       return;
     }
 
-    statusEl.textContent = `v${update.version} をダウンロード中…`;
+    statusEl.textContent = `Downloading v${update.version}…`;
     await update.downloadAndInstall((event) => {
       if (event.event === "Progress") {
         const percent = event.data.percent != null ? Math.round(event.data.percent) : null;
         statusEl.textContent =
-          percent != null ? `ダウンロード中… ${percent}%` : "ダウンロード中…";
+          percent != null ? `Downloading… ${percent}%` : "Downloading…";
       }
     });
 
-    statusEl.textContent = "再起動中…";
+    statusEl.textContent = "Restarting…";
     await relaunch();
   } catch (error) {
     statusEl.textContent = String(error);

@@ -30,7 +30,7 @@ export const icons = {
 };
 
 export const resolutionPresets = [
-  { value: "square", label: "正方形", icon: "ratio11" },
+  { value: "square", label: "Square", icon: "ratio11" },
   { value: "ratio16x9", label: "16:9", icon: "ratio169" },
 ];
 

@@ -22,6 +22,7 @@ import {
   api,
 } from "./app.js";
 import { icon, icons } from "./icons.js";
+import shotIcon from "./assets/shot-icon.png";
 import { initTooltips } from "./tooltip.js";
 import { bindRightDragMove } from "./right-drag-move.js";
 import {
@@ -37,7 +38,13 @@ function injectIcon(element, name) {
 }
 
 function injectStaticIcons() {
-  injectIcon(document.querySelector(".titlebar-brand"), "brand");
+  const brand = document.querySelector(".titlebar-brand");
+  if (brand) {
+    const image = document.createElement("img");
+    image.src = shotIcon;
+    image.alt = "Shot";
+    brand.replaceChildren(image);
+  }
   injectIcon(document.getElementById("capture-full-btn"), "shutter");
   injectIcon(document.getElementById("capture-region-btn"), "region");
   injectIcon(document.getElementById("frame-mode-btn"), "frame");
@@ -239,8 +246,8 @@ function bindToggleButtons() {
     taskbarBtn.classList.toggle("active", next);
     taskbarBtn.setAttribute("aria-pressed", String(next));
     taskbarBtn.dataset.tooltip = next
-      ? "タスクバーを除外（オン）"
-      : "タスクバーを除外（オフ）";
+      ? "Exclude taskbar (on)"
+      : "Exclude taskbar (off)";
     await persistSettings();
     setStatus(next ? "Taskbar excluded" : "Taskbar included");
   });

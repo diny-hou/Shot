@@ -168,7 +168,7 @@ impl AppSettings {
                 if self.shows_resolution() {
                     "1080×1080".into()
                 } else {
-                    "正方形".into()
+                    "Square".into()
                 }
             }
             "ratio16x9" | "16:9" | "window" => {

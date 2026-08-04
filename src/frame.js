@@ -172,7 +172,7 @@ function setActivePreset(id) {
   activePresetId = id || null;
   const preset = presets.find((entry) => entry.id === activePresetId);
   if (presetLabel) {
-    presetLabel.textContent = preset?.label || "プリセット";
+    presetLabel.textContent = preset?.label || "Preset";
   }
   renderPresetPanel();
 }
@@ -184,7 +184,7 @@ function renderPresetPanel() {
   if (!presets.length) {
     const empty = document.createElement("div");
     empty.className = "frame-preset-empty";
-    empty.textContent = "保存済みプリセットなし";
+    empty.textContent = "No saved presets";
     presetPanel.appendChild(empty);
     return;
   }
@@ -209,7 +209,7 @@ function renderPresetPanel() {
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "frame-preset-remove";
-    remove.title = "削除";
+    remove.title = "Remove";
     remove.textContent = "×";
     remove.addEventListener("click", async (event) => {
       event.preventDefault();
@@ -218,7 +218,7 @@ function renderPresetPanel() {
         await invoke("delete_frame_layout_preset", { id: preset.id });
         if (activePresetId === preset.id) {
           activePresetId = null;
-          if (presetLabel) presetLabel.textContent = "プリセット";
+          if (presetLabel) presetLabel.textContent = "Preset";
         }
       } catch (error) {
         console.error(error);
@@ -254,7 +254,7 @@ async function refreshPresets() {
     activePresetId = null;
   }
   if (presetLabel && !activePresetId) {
-    presetLabel.textContent = "プリセット";
+    presetLabel.textContent = "Preset";
   }
   renderPresetPanel();
 }
@@ -262,7 +262,7 @@ async function refreshPresets() {
 async function saveCurrentLayout() {
   closePresetPanel();
   const defaultName = "";
-  const label = window.prompt("プリセット名（空欄でサイズ名）", defaultName);
+  const label = window.prompt("Preset name (leave blank to use the size)", defaultName);
   if (label === null) return;
   try {
     const preset = await invoke("save_frame_layout_preset", { label });
@@ -319,7 +319,7 @@ listen("frame-layout-presets-changed", (event) => {
   presets = Array.isArray(event.payload) ? event.payload : [];
   if (activePresetId && !presets.some((entry) => entry.id === activePresetId)) {
     activePresetId = null;
-    if (presetLabel) presetLabel.textContent = "プリセット";
+    if (presetLabel) presetLabel.textContent = "Preset";
   }
   renderPresetPanel();
 });

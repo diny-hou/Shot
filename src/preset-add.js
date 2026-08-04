@@ -21,7 +21,7 @@ function setPresetAddKind(kind) {
     if (wLabel) wLabel.textContent = "W (px)";
     if (hLabel) hLabel.textContent = "H (px)";
     if (sep) sep.textContent = "×";
-    if (nameInput) nameInput.placeholder = "例: フルHD";
+    if (nameInput) nameInput.placeholder = "e.g. Full HD";
     if (wInput && Number(wInput.value) <= 32) {
       wInput.value = "1920";
       hInput.value = "1080";
@@ -30,7 +30,7 @@ function setPresetAddKind(kind) {
     if (wLabel) wLabel.textContent = "W";
     if (hLabel) hLabel.textContent = "H";
     if (sep) sep.textContent = ":";
-    if (nameInput) nameInput.placeholder = "例: 4:3";
+    if (nameInput) nameInput.placeholder = "e.g. 4:3";
     if (wInput && Number(wInput.value) > 64) {
       wInput.value = "16";
       hInput.value = "9";

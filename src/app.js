@@ -67,7 +67,7 @@ function builtinDisplay(id, settings = appState.settings) {
   if (id === "square") {
     return res
       ? { label: "1080×1080", meta: "1:1" }
-      : { label: "正方形", meta: "1:1" };
+      : { label: "Square", meta: "1:1" };
   }
   return res
     ? { label: "1920×1080", meta: "16:9" }
@@ -112,20 +112,20 @@ function presetLabel(value, settings = appState.settings) {
 }
 
 function monitorOptionLabel(monitor, index) {
-  return `ディスプレイ${index + 1}${monitor.isPrimary ? " (メイン)" : ""}`;
+  return `Display ${index + 1}${monitor.isPrimary ? " (Primary)" : ""}`;
 }
 
 export function monitorMenuLabel(monitorId, monitors = appState.monitors) {
-  if (monitorId === "all") return "全モニター";
+  if (monitorId === "all") return "All displays";
   if (monitorId === "primary" || !monitorId) {
     const primaryIndex = monitors.findIndex((monitor) => monitor.isPrimary);
     const index = primaryIndex >= 0 ? primaryIndex : 0;
     const monitor = monitors[index];
-    return monitor ? monitorOptionLabel(monitor, index) : "ディスプレイ1";
+    return monitor ? monitorOptionLabel(monitor, index) : "Display 1";
   }
   const index = Number(monitorId);
   const monitor = monitors[index];
-  if (!monitor) return "ディスプレイ";
+  if (!monitor) return "Display";
   return monitorOptionLabel(monitor, index);
 }
 
@@ -150,8 +150,8 @@ export async function renderMonitorMenu() {
   allOption.type = "button";
   allOption.className = "menu-select-option";
   allOption.dataset.value = "all";
-  allOption.dataset.label = "全モニター";
-  allOption.textContent = "全モニター";
+  allOption.dataset.label = "All displays";
+  allOption.textContent = "All displays";
   allOption.setAttribute("role", "option");
   panel.appendChild(allOption);
 
@@ -193,7 +193,7 @@ function formatScaleMeta(scale) {
   if (!Number.isFinite(value) || value <= 0) return "";
   if (Math.abs(value - 0.5) < 0.001) return "1/2";
   if (Math.abs(value - 2) < 0.001) return "2×";
-  if (Math.abs(value - 1) < 0.001) return "等倍";
+  if (Math.abs(value - 1) < 0.001) return "1×";
   if (Math.abs(value - Math.round(value)) < 0.001) return `${Math.round(value)}×`;
   return `${Math.round(value * 100)}%`;
 }
@@ -253,7 +253,7 @@ export function renderExportScaleMenu() {
   const addBtn = document.createElement("button");
   addBtn.type = "button";
   addBtn.className = "menu-select-action";
-  addBtn.textContent = "スケールを追加…";
+  addBtn.textContent = "Add scale…";
   addBtn.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -292,7 +292,7 @@ function makeExportScaleOption(id, label, meta, current, options = {}) {
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "menu-select-remove";
-    remove.title = "削除";
+    remove.title = "Remove";
     remove.textContent = "×";
     remove.addEventListener("click", async (event) => {
       event.preventDefault();
@@ -356,7 +356,7 @@ const BUILTIN_PRESETS = [
 ];
 
 const BUILTIN_EXPORT_SCALES = [
-  { id: "1", label: "100%", meta: "等倍" },
+  { id: "1", label: "100%", meta: "1×" },
   { id: "0.5", label: "50%", meta: "1/2" },
   { id: "2", label: "200%", meta: "2×" },
 ];
@@ -460,11 +460,11 @@ export function renderPresetMenu() {
   const toggle = document.createElement("div");
   toggle.className = "seg-toggle";
   toggle.setAttribute("role", "group");
-  toggle.setAttribute("aria-label", "表示モード");
+  toggle.setAttribute("aria-label", "Display mode");
 
   for (const [mode, label] of [
-    ["resolution", "解像度"],
-    ["ratio", "比率"],
+    ["resolution", "Resolution"],
+    ["ratio", "Ratio"],
   ]) {
     const btn = document.createElement("button");
     btn.type = "button";
@@ -512,7 +512,7 @@ export function renderPresetMenu() {
   const addBtn = document.createElement("button");
   addBtn.type = "button";
   addBtn.className = "menu-select-action";
-  addBtn.textContent = "プリセットを追加…";
+  addBtn.textContent = "Add preset…";
   addBtn.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
@@ -544,7 +544,7 @@ function makePresetOption(id, label, meta, current, options = {}) {
   if (reorderable) {
     const handle = document.createElement("span");
     handle.className = "menu-select-handle";
-    handle.title = "ドラッグで並べ替え";
+    handle.title = "Drag to reorder";
     handle.textContent = "⋮⋮";
     handle.draggable = true;
     handle.addEventListener("dragstart", (event) => {
@@ -597,7 +597,7 @@ function makePresetOption(id, label, meta, current, options = {}) {
     const up = document.createElement("button");
     up.type = "button";
     up.className = "menu-select-move";
-    up.title = "上へ";
+    up.title = "Move up";
     up.textContent = "↑";
     up.disabled = !canMoveUp;
     up.addEventListener("click", async (event) => {
@@ -609,7 +609,7 @@ function makePresetOption(id, label, meta, current, options = {}) {
     const down = document.createElement("button");
     down.type = "button";
     down.className = "menu-select-move";
-    down.title = "下へ";
+    down.title = "Move down";
     down.textContent = "↓";
     down.disabled = !canMoveDown;
     down.addEventListener("click", async (event) => {
@@ -626,7 +626,7 @@ function makePresetOption(id, label, meta, current, options = {}) {
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "menu-select-remove";
-    remove.title = "削除";
+    remove.title = "Remove";
     remove.textContent = "×";
     remove.addEventListener("click", async (event) => {
       event.preventDefault();
@@ -805,8 +805,8 @@ export function applySettingsToForm(settings) {
   taskbarBtn.classList.toggle("active", exclude);
   taskbarBtn.setAttribute("aria-pressed", String(exclude));
   taskbarBtn.dataset.tooltip = exclude
-    ? "タスクバーを除外（オン）"
-    : "タスクバーを除外（オフ）";
+    ? "Exclude taskbar (on)"
+    : "Exclude taskbar (off)";
 }
 
 export async function persistSettings() {
@@ -890,7 +890,7 @@ export function renderStock() {
 function createStockEmpty() {
   const empty = document.createElement("div");
   empty.className = "stock-empty";
-  empty.dataset.tooltip = "まだキャプチャがありません";
+  empty.dataset.tooltip = "No captures yet";
   empty.textContent = "Capture to add stock";
   return empty;
 }
@@ -905,7 +905,7 @@ function createStockCard(item) {
   button.className = "stock-item";
   button.dataset.id = item.id;
   button.draggable = true;
-  button.dataset.tooltip = `${item.filename} · クリック: フォルダ · Ctrl+クリック: コピー · ドラッグ: 書き出し（倍率適用）`;
+  button.dataset.tooltip = `${item.filename} · Click: reveal in folder · Ctrl+click: copy · Drag: export (scaled)`;
 
   const frame = document.createElement("div");
   frame.className = "stock-frame";
@@ -948,7 +948,7 @@ function createStockCard(item) {
   const deleteBtn = document.createElement("button");
   deleteBtn.type = "button";
   deleteBtn.className = "stock-delete";
-  deleteBtn.dataset.tooltip = "ストックから削除";
+  deleteBtn.dataset.tooltip = "Remove from stock";
   deleteBtn.textContent = "×";
   deleteBtn.addEventListener("click", async (event) => {
     event.stopPropagation();

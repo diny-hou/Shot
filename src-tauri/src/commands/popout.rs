@@ -69,7 +69,7 @@ fn open_or_focus(
 
 #[tauri::command]
 pub async fn open_preset_add_window(app: AppHandle) -> Result<(), String> {
-    open_or_focus(&app, "preset-add", "プリセットを追加", "preset-add.html", 300.0, 292.0)
+    open_or_focus(&app, "preset-add", "Add preset", "preset-add.html", 300.0, 292.0)
 }
 
 #[tauri::command]

@@ -123,15 +123,16 @@ select {
 .titlebar-brand {
   width: 16px;
   height: 16px;
-  color: var(--accent);
   flex-shrink: 0;
   opacity: 0.9;
-  filter: drop-shadow(0 0 8px var(--accent-glow));
+  filter: drop-shadow(0 0 8px rgba(255, 43, 135, 0.45));
 }
 
-.titlebar-brand svg {
+.titlebar-brand img {
   width: 100%;
   height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
   pointer-events: none;
 }
 
